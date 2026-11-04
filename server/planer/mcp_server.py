@@ -153,7 +153,8 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     Gültige Typen mit eigener 3D-Form: sofa, ecksofa, sessel, sitzsack, stuhl, esssofa, bank, esstisch,
     esstisch_rund, couchtisch, couchtisch_rund, schreibtisch, bett, bett_einzel, kleiderschrank, kleiderstange,
     sideboard, tv_board_haengend, regal_niedrig, wandregal, nachttisch, nachttisch_haengend, schuhbank,
-    garderobe_lamellen, teppich, spiegel, spiegel_rund, bild, pflanze, stehleuchte, tischleuchte; andere Typen
+    garderobe_lamellen, teppich, spiegel, spiegel_rund, bild, pflanze, stehleuchte, tischleuchte, waschmaschine, trockner,
+    apothekerschrank; andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}

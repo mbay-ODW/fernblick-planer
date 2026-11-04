@@ -106,6 +106,33 @@ export function moebelBauen(m: any): MoebelObjekt {
       polster(b, rb - 0.06, 0.42, 0.14, kissen, sx * (w / 2 - rb / 2), sitz + 0.23, -d / 2 + 0.27);
       break;
     }
+    case "waschmaschine":
+    case "trockner": {
+      // Frontlader: weißer Korpus, Bedienblende oben, Bullauge vorn (+Z), Waschmittelschublade
+      const weiss = mat(farbe, "glatt", { name: "Gerät Lack" });
+      const blende = mat("#e3e5e6", "glatt", { name: "Bedienblende" });
+      b(w, h - 0.12, d, weiss, 0, (h - 0.12) / 2, 0);
+      b(w, 0.12, d, blende, 0, h - 0.06, 0);
+      b(w * 0.3, 0.07, 0.006, weiss, -w / 2 + w * 0.18, h - 0.06, d / 2 + 0.003);
+      const knopf = rund(g, 0.028, 0.02, dunkel, w * 0.12, h - 0.06, d / 2 + 0.01, 24);
+      knopf.rotation.x = Math.PI / 2;
+      b(w * 0.18, 0.035, 0.004, mat("#1b2a33", "glatt", { name: "Display" }), w * 0.34, h - 0.06, d / 2 + 0.003);
+      const r = Math.min(w, h) * 0.28, zy = (h - 0.12) * 0.52;
+      const ring = rund(g, r, 0.035, mat(typ === "trockner" ? "#9aa0a6" : "#c7cbcf", "metall", { name: "Türring" }), 0, zy, d / 2 + 0.017, 48);
+      ring.rotation.x = Math.PI / 2;
+      const glas = rund(g, r * 0.78, 0.04, mat("#22303a", "glatt", { name: "Bullauge" }), 0, zy, d / 2 + 0.02, 48);
+      glas.rotation.x = Math.PI / 2;
+      break;
+    }
+    case "apothekerschrank": {
+      // schmaler Hochschrank mit einem Vollauszug; Griffleiste oben, Sockel zurückgesetzt
+      const sockel = 0.06;
+      b(w - 0.02, sockel, d - 0.04, mat("#2a2a2a", "glatt", { name: "Sockel" }), 0, sockel / 2, -0.02);
+      b(w, h - sockel, d - 0.02, haupt, 0, sockel + (h - sockel) / 2, -0.01);
+      b(w - 0.004, h - sockel - 0.004, 0.019, haupt, 0, sockel + (h - sockel) / 2, d / 2 - 0.0095);
+      b(w * 0.6, 0.012, 0.02, dunkel, 0, h - 0.05, d / 2 + 0.01);
+      break;
+    }
     case "esssofa":
     case "bank": {
       const sitz = 0.46;

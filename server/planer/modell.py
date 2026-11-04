@@ -52,7 +52,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
         _v("gullvalla-2er", "sofa", "2er-Sofa GULLVALLA", 1.42, 0.83, 0.78, "graugrün", "Sitzen", "Stoff"),
         _v("ecksofa-carryhome", "ecksofa", "Ecksofa mit Recamiere (CARRYHOME)", 2.84, 1.62, 0.85, "greige/sand",
            "Sitzen", "Cord", preis_eur=899),
-    ] + ecksofas() + [
+    ] + ecksofas() + haushalt() + [
         _v("sessel", "sessel", "Sessel", 0.80, 0.80, 0.85, "olivgrün", "Sitzen", "Stoff"),
         _v("sitzsack", "sitzsack", "Sitzsack/Bodenkissen", 0.70, 0.70, 0.45, "sand", "Sitzen", "Cord"),
         _v("stuhl", "stuhl", "Esszimmerstuhl", 0.50, 0.55, 0.85, "olivgrün", "Sitzen", "Stoff abwischbar"),
@@ -98,7 +98,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 4
+BIBLIOTHEK_STAND = 5
 
 
 def ecksofas() -> list[dict[str, Any]]:
@@ -108,6 +108,16 @@ def ecksofas() -> list[dict[str, Any]]:
            recamiere="rechts"),
         _v("ecksofa-recamiere-links", "ecksofa", "Ecksofa Recamiere links", 2.84, 1.62, 0.85, "greige", "Sitzen", "Stoff",
            recamiere="links"),
+    ]
+
+
+def haushalt() -> list[dict[str, Any]]:
+    """Haushaltsgeräte und Badmöbel (Standardmaße)."""
+    return [
+        _v("waschmaschine", "waschmaschine", "Waschmaschine (Frontlader)", 0.60, 0.60, 0.85, "weiß", "Sonstiges", "Lack"),
+        _v("trockner", "trockner", "Wäschetrockner", 0.60, 0.65, 0.85, "weiß", "Sonstiges", "Lack"),
+        _v("apothekerschrank-bad", "apothekerschrank", "Bad-Apothekerschrank (Vollauszug)", 0.30, 0.45, 1.80, "weiß",
+           "Stauraum", "Holz lackiert"),
     ]
 
 
@@ -316,7 +326,8 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
     m.setdefault("bibliothek", standard_bibliothek())
     if int(meta.get("bibliothek_stand", 1)) < BIBLIOTHEK_STAND:
         vorhanden = {v.get("vorlage_id") for v in m["bibliothek"]}
-        m["bibliothek"] += [v for v in wandleuchten() + medien() + ecksofas() if v["vorlage_id"] not in vorhanden]
+        m["bibliothek"] += [v for v in wandleuchten() + medien() + ecksofas() + haushalt()
+                              if v["vorlage_id"] not in vorhanden]
         meta["bibliothek_stand"] = BIBLIOTHEK_STAND
     m.setdefault("einstellungen", {"breitengrad": 49.654, "laengengrad": 9.077, "datum": "2026-06-21",
                                    "uhrzeit": "17:00", "szenario": "aus", "belichtung": 1.0})

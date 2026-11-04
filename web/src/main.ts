@@ -28,7 +28,7 @@ const BODEN_DEKORE: [string, string, string][] = [
   ["Steinoptik hellgrau", "Fliese", "#c9c4bb"], ["Steinoptik anthrazit", "Fliese", "#5d5b58"], ["Beton-Optik", "Beton", "#a8a49c"],
 ];
 const WANDTYPEN = /^(wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend|tv$)/;
-const TYPEN = ["tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
+const TYPEN = ["waschmaschine", "trockner", "apothekerschrank", "tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
   "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
   "kleiderstange", "kommode", "sideboard", "regal_niedrig", "tv_board_haengend", "wandregal", "garderobe_lamellen", "spiegel",
   "spiegel_rund", "bild", "teppich", "pflanze", "stehleuchte", "tischleuchte"];
