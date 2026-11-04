@@ -2,6 +2,9 @@
 import * as THREE from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+
+let flaechenlichtBereit = false;
 import { kelvinFarbe, leuchtMat, mat } from "./material";
 import { leuchtePfad } from "./haus";
 import type { Masse, WandInfo } from "./haus";
@@ -282,14 +285,22 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
           if ((le.reflexion ?? hoch) && treffer) {
             const h = treffer(sp.position.clone(), dir.clone());
             if (h) {
-              const albedo = (h.farbe.r * 0.2126 + h.farbe.g * 0.7152 + h.farbe.b * 0.0722);
-              const rf = new THREE.SpotLight(kelvinFarbe(kelvin).multiply(h.farbe.clone().multiplyScalar(1 / Math.max(0.05, Math.max(h.farbe.r, h.farbe.g, h.farbe.b)))),
-                0, 12, (80 * Math.PI) / 180, 1, 2);
-              rf.position.copy(h.punkt).addScaledVector(h.normal, 0.25);
-              rf.target.position.copy(h.punkt).addScaledVector(h.normal, 3);
-              // reflektierter Anteil: Albedo × 0,8 (matte Oberfläche), auf die Halbkugel verteilt
-              rf.userData = { spot: true, anteil: (1 / n) * Math.min(0.9, albedo * 0.8), keinSchatten: true, reflex: true };
-              g.add(rf, rf.target);
+              if (!flaechenlichtBereit) {
+                RectAreaLightUniformsLib.init();
+                flaechenlichtBereit = true;
+              }
+              const albedo = h.farbe.r * 0.2126 + h.farbe.g * 0.7152 + h.farbe.b * 0.0722;
+              const tint = h.farbe.clone().multiplyScalar(1 / Math.max(0.05, Math.max(h.farbe.r, h.farbe.g, h.farbe.b)));
+              // Größe des angestrahlten Flecks aus Abstand und Kegel; eine weiche Flächenleuchte auf der Holzfläche,
+              // die diffus in den Raum abstrahlt (keine Kegelkante wie bei einem Spot)
+              const abstand = h.punkt.distanceTo(sp.position);
+              const seite = Math.max(0.6, Math.min(2.2, 2 * abstand * Math.tan(sp.angle) + 0.3));
+              const rf = new THREE.RectAreaLight(kelvinFarbe(kelvin).multiply(tint), 0, seite, seite);
+              rf.position.copy(h.punkt).addScaledVector(h.normal, 0.03);
+              rf.lookAt(h.punkt.clone().addScaledVector(h.normal, 2));
+              // reflektierter Anteil: Albedo × 0,8 (matte Oberfläche)
+              rf.userData = { flaeche: true, anteil: (1 / n) * Math.min(0.9, albedo * 0.8), keinSchatten: true, reflex: true };
+              g.add(rf);
               lichter.push(rf);
             }
           }
@@ -358,7 +369,11 @@ export function leuchteSetzen(e: LeuchteEintrag, dimm: number, schatten: boolean
   for (const l of e.lichter) {
     const anteil = l.userData.anteil ?? 1;
     const lm = e.lumen * anteil * dimm;
-    if ((l as THREE.SpotLight).isSpotLight) {
+    if ((l as THREE.RectAreaLight).isRectAreaLight) {
+      // Leuchtdichte der Fläche: Lichtstrom / (Fläche · π)
+      const r = l as THREE.RectAreaLight;
+      r.intensity = (lm / (r.width * r.height * Math.PI)) * LICHT_K * 4;
+    } else if ((l as THREE.SpotLight).isSpotLight) {
       const sp = l as THREE.SpotLight;
       const omega = 2 * Math.PI * (1 - Math.cos(sp.angle));
       sp.intensity = (lm / omega) * LICHT_K * 4;
