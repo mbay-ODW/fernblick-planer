@@ -2,7 +2,7 @@
 import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad, lamellenMasse } from "./haus";
 import type { Bauteil } from "./szene";
 import { bauteilFinden, bauteilVerschieben, mitlaeuferKopie } from "./bauteile";
-import { ecken, istFlach } from "./moebel";
+import { ecken, istFlach, recamiereLinks } from "./moebel";
 import { wandPoly } from "./pruefung";
 
 function inPoly(x: number, y: number, poly: P2[]) {
@@ -313,7 +313,8 @@ export class Plan {
     if (!istFlach(x)) el("line", { x1: -w / 2, y1: -d / 2, x2: w / 2, y2: -d / 2, class: "ruecken" }, t);
     if (x.typ === "ecksofa") {
       const rb = Math.min(1.0, w * 0.38), sitzT = Math.min(0.95, d * 0.6);
-      el("polyline", { points: pts([[-w / 2, -d / 2 + sitzT], [w / 2 - rb, -d / 2 + sitzT], [w / 2 - rb, d / 2]]), class: "kontur" }, t);
+      const sx = recamiereLinks(x) ? -1 : 1;
+      el("polyline", { points: pts([[sx * (-w / 2), -d / 2 + sitzT], [sx * (w / 2 - rb), -d / 2 + sitzT], [sx * (w / 2 - rb), d / 2]]), class: "kontur" }, t);
     }
     if (/couchtisch_rund|esstisch_rund/.test(x.typ)) {
       t.removeChild(t.firstChild!);

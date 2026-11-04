@@ -9,7 +9,7 @@ import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2, lamellenMasse } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
-import { tvZoll } from "./moebel";
+import { tvZoll, recamiereLinks } from "./moebel";
 import { SCHMAL } from "./geraet";
 
 type Modus = "2d" | "3d" | "render";
@@ -359,7 +359,7 @@ class App {
       farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
-    for (const k of ["z", "licht", "preis_eur", "link"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
     if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
@@ -394,9 +394,9 @@ class App {
     if (!x) return;
     this.aendern((m) => {
       const y = m.moebel.find((z: any) => z.id === x.id);
-      for (const k of ["z", "licht", "preis_eur", "link"]) delete y[k];
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll"]) delete y[k];
       Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
-      for (const k of ["z", "licht", "preis_eur", "link"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
     }, "moebel", `${x.name} → ${v.name}`);
     this.tauschModus = false;
   }
@@ -1029,6 +1029,9 @@ class App {
         h("label", {}, "Farbe"), h("div", { class: "zwei" }, h("input", { type: "color", value: x.farbe_hex ?? "#a0a0a0", onchange: (e: Event) => setze("farbe_hex", (e.target as HTMLInputElement).value) }),
           h("input", { value: x.farbe ?? "", placeholder: "Farbname", onchange: (e: Event) => setze("farbe", (e.target as HTMLInputElement).value) })),
         h("label", {}, "Material"), h("input", { value: x.material ?? "", onchange: (e: Event) => setze("material", (e.target as HTMLInputElement).value) }),
+        ...(x.typ === "ecksofa" ? [h("label", {}, "Recamiere (von vorn)"), h("div", { class: "chips" },
+          ...(["links", "rechts"] as const).map((seite) => h("button", { class: (recamiereLinks(x) ? "links" : "rechts") === seite ? "an" : "",
+            onclick: () => setze("recamiere", seite, `${x.name}: Recamiere ${seite}`) }, seite)))] : []),
         ...(String(x.typ).startsWith("tv_board") ? [h("label", {}, "TV Zoll (0 = keiner)"), num(tvZoll(x), (v) => setze("tv_zoll", Math.max(0, Math.round(v)), `${x.name}: TV ${Math.round(v)}"`), 1)] : []),
         ...(x.licht ? [
           h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },

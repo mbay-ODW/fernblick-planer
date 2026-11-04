@@ -147,7 +147,8 @@ def bibliothek_liste(kategorie: str = "", suche: str = "") -> dict[str, Any]:
 def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, Any]:
     """Legt Möbel an oder ändert sie (nach id; ohne id = neu). Bei Änderungen werden nur die genannten Felder
     überschrieben. Felder: id, raum, geschoss, typ, name, masse_bth [B, T, H], pos [x, y], rot_grad, z, farbe,
-    material, quelle, hinweis, preis_eur, link, verschiebbar. Ein neues Möbel kann mit vorlage_id aus der
+    material, quelle, hinweis, preis_eur, link, verschiebbar; ecksofa: recamiere = links/rechts (von vorn gesehen).
+    Ein neues Möbel kann mit vorlage_id aus der
     Bibliothek angelegt werden (Maße/Farbe/Typ werden übernommen, eigene Felder gehen vor).
     Gültige Typen mit eigener 3D-Form: sofa, ecksofa, sessel, sitzsack, stuhl, esssofa, bank, esstisch,
     esstisch_rund, couchtisch, couchtisch_rund, schreibtisch, bett, bett_einzel, kleiderschrank, kleiderstange,
@@ -162,7 +163,7 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
             v = bib.get(str(e.pop("vorlage_id", "") or ""))
             if v and not any(x.get("id") == e.get("id") for x in m["moebel"]):
                 basis = {k: copy.deepcopy(v[k]) for k in ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material",
-                                                           "z", "licht", "preis_eur") if k in v}
+                                                           "z", "licht", "preis_eur", "recamiere") if k in v}
                 basis["vorlage_id"] = v["vorlage_id"]
                 e = {**basis, **e}
             if not e.get("id") and ("pos" not in e or "masse_bth" not in e):
@@ -197,7 +198,7 @@ def moebel_tauschen(id: str, vorlage_id: str = "", daten: dict[str, Any] | None 
             if not v:
                 raise ValueError(f"Vorlage {vorlage_id} nicht gefunden")
             neu = {k: copy.deepcopy(v[k]) for k in ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", "z",
-                                                     "licht", "preis_eur") if k in v}
+                                                     "licht", "preis_eur", "recamiere") if k in v}
             neu["vorlage_id"] = vorlage_id
         neu.update(daten or {})
         for k in ("id", "pos", "rot_grad", "raum", "geschoss"):

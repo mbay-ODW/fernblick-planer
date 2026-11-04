@@ -86,22 +86,24 @@ export function moebelBauen(m: any): MoebelObjekt {
       break;
     }
     case "ecksofa": {
-      // L-Form: Lehne entlang der Rückseite, Recamiere am +X-Ende über die ganze Tiefe
+      // L-Form: Lehne entlang der Rückseite, Recamiere über die ganze Tiefe –
+      // von vorn gesehen rechts (+X, Standard) oder links (recamiere: "links" spiegelt in X)
+      const sx = recamiereLinks(m) ? -1 : 1;
       const sitzT = Math.min(0.95, d * 0.6), sitz = 0.44, lehne = Math.max(0.75, h * 0.85), arm = 0.16;
       const rb = Math.min(1.0, w * 0.38);
       polster(b, w, sitz, sitzT, stoff, 0, sitz / 2, -d / 2 + sitzT / 2);
-      polster(b, rb, sitz, d - sitzT, stoff, w / 2 - rb / 2, sitz / 2, -d / 2 + sitzT + (d - sitzT) / 2);
+      polster(b, rb, sitz, d - sitzT, stoff, sx * (w / 2 - rb / 2), sitz / 2, -d / 2 + sitzT + (d - sitzT) / 2);
       polster(b, w, lehne, 0.2, stoff, 0, lehne / 2, -d / 2 + 0.1);
-      polster(b, arm, 0.62, sitzT, stoff, -w / 2 + arm / 2, 0.31, -d / 2 + sitzT / 2);
+      polster(b, arm, 0.62, sitzT, stoff, sx * (-w / 2 + arm / 2), 0.31, -d / 2 + sitzT / 2);
       const n = Math.max(2, Math.round((w - rb - arm) / 0.7));
       const kb = (w - rb - arm) / n;
       for (let i = 0; i < n; i++) {
-        const x = -w / 2 + arm + kb * (i + 0.5);
+        const x = sx * (-w / 2 + arm + kb * (i + 0.5));
         polster(b, kb - 0.03, 0.1, sitzT - 0.25, kissen, x, sitz + 0.05, -d / 2 + 0.2 + (sitzT - 0.2) / 2);
         polster(b, kb - 0.05, 0.42, 0.14, kissen, x, sitz + 0.23, -d / 2 + 0.27);
       }
-      polster(b, rb - 0.04, 0.1, d - 0.3, kissen, w / 2 - rb / 2, sitz + 0.05, 0.1);
-      polster(b, rb - 0.06, 0.42, 0.14, kissen, w / 2 - rb / 2, sitz + 0.23, -d / 2 + 0.27);
+      polster(b, rb - 0.04, 0.1, d - 0.3, kissen, sx * (w / 2 - rb / 2), sitz + 0.05, 0.1);
+      polster(b, rb - 0.06, 0.42, 0.14, kissen, sx * (w / 2 - rb / 2), sitz + 0.23, -d / 2 + 0.27);
       break;
     }
     case "esssofa":
@@ -428,6 +430,12 @@ export function ecken(m: any): [number, number][] {
   ]);
 }
 
+/** Ecksofa: Recamiere von vorn gesehen links? (Feld recamiere, sonst aus dem Namen „Recamiere links“) */
+export function recamiereLinks(m: any): boolean {
+  if (m.recamiere) return String(m.recamiere).toLowerCase() === "links";
+  return /recamiere\s+links|links\s*recamiere/i.test(String(m.name ?? ""));
+}
+
 /** Grundflächen für die Kollisionsprüfung (Ecksofa als L aus zwei Rechtecken). */
 export function fussflaechen(m: any): [number, number][][] {
   if (m.typ !== "ecksofa") return [ecken(m)];
@@ -436,7 +444,8 @@ export function fussflaechen(m: any): [number, number][][] {
   const a = ((m.rot_grad ?? 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
   const rechteck = (x0: number, y0: number, x1: number, y1: number): [number, number][] =>
     [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => [m.pos[0] + x * c - y * s, m.pos[1] + x * s + y * c]);
-  return [rechteck(-w / 2, -d / 2, w / 2, -d / 2 + sitzT), rechteck(w / 2 - rb, -d / 2 + sitzT, w / 2, d / 2)];
+  const rec = recamiereLinks(m) ? rechteck(-w / 2, -d / 2 + sitzT, -w / 2 + rb, d / 2) : rechteck(w / 2 - rb, -d / 2 + sitzT, w / 2, d / 2);
+  return [rechteck(-w / 2, -d / 2, w / 2, -d / 2 + sitzT), rec];
 }
 
 /** Möbel, die nicht kollidieren (liegen flach oder hängen über anderem). */
