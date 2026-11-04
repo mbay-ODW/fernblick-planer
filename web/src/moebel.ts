@@ -1,7 +1,7 @@
 // Parametrische Möbel. Lokales System: Mitte der Grundfläche im Ursprung, Breite b entlang X, Tiefe t entlang Z,
 // Front nach +Z (bei rot 0 = Süden), Rückseite −Z, Höhe nach +Y ab Unterkante.
 import * as THREE from "three";
-import { mat, artAusMaterial, leuchtMat, kelvinFarbe } from "./material";
+import { mat, artAusMaterial, leuchtMat, lichtFarbe } from "./material";
 
 export function farbeVon(m: any): string {
   return m.farbe_hex || "#a0a0a0";
@@ -369,11 +369,11 @@ export function moebelBauen(m: any): MoebelObjekt {
       const fuss = typ === "stehleuchte" ? 0.14 : 0.08;
       rund(g, fuss, 0.02, dunkel, 0, 0.01, 0, 24);
       rund(g, 0.012, h - 0.25, dunkel, 0, (h - 0.25) / 2, 0, 8);
-      const lm = leuchtMat("#efe6d6", m.licht?.kelvin ?? 2700);
+      const lm = leuchtMat("#efe6d6", lichtFarbe(m.licht));
       leuchtflaechen.push(lm);
       const schirm = rund(g, Math.min(w, d) / 2 * 0.9, 0.25, lm, 0, h - 0.125, 0, 32, Math.min(w, d) / 2);
       schirm.castShadow = false;
-      const pl = new THREE.PointLight(kelvinFarbe(m.licht?.kelvin ?? 2700), 0, 8, 2);
+      const pl = new THREE.PointLight(lichtFarbe(m.licht), 0, 8, 2);
       pl.position.set(0, h - 0.15, 0);
       pl.userData = { lumen: m.licht?.lumen ?? (typ === "stehleuchte" ? 800 : 400), kelvin: m.licht?.kelvin ?? 2700 };
       g.add(pl);
@@ -391,14 +391,14 @@ export function moebelBauen(m: any): MoebelObjekt {
       const platte = typ === "bilderleuchte" ? 0.05 : 0.09;
       b(platte, platte, 0.012, dunkel, 0, typ === "bilderleuchte" ? h / 2 : Math.min(h / 2, 0.12), hinten + 0.006);
       const spot = (pos: THREE.Vector3, dir: THREE.Vector3, winkel: number, anteil: number) => {
-        const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 10, (winkel * Math.PI) / 360, 0.6, 2);
+        const sp = new THREE.SpotLight(lichtFarbe({ ...(m.licht ?? {}), kelvin }), 0, 10, (winkel * Math.PI) / 360, 0.6, 2);
         sp.position.copy(pos);
         sp.target.position.copy(pos).addScaledVector(dir.normalize(), 2);
         sp.userData = { lumen, kelvin, anteil };
         g.add(sp, sp.target);
         lichter.push(sp);
       };
-      const lm = leuchtMat("#fff3df", kelvin);
+      const lm = leuchtMat("#fff3df", lichtFarbe({ ...(m.licht ?? {}), kelvin }));
       leuchtflaechen.push(lm);
       if (typ === "wandleuchte_updown") {
         const r = Math.min(w, d) / 2;
@@ -414,7 +414,7 @@ export function moebelBauen(m: any): MoebelObjekt {
         (schirm.material as THREE.Material).side = THREE.DoubleSide;
         schirm.position.set(0, h * 0.5, hinten + d * 0.55);
         g.add(schirm);
-        const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 8, 2);
+        const pl = new THREE.PointLight(lichtFarbe({ ...(m.licht ?? {}), kelvin }), 0, 8, 2);
         pl.position.set(0, h * 0.5, hinten + d * 0.55);
         pl.userData = { lumen, kelvin, anteil: 1 };
         g.add(pl);

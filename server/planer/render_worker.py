@@ -63,6 +63,18 @@ def sonne_rgb(hoehe: float) -> tuple[float, float, float] | None:
     return SONNE[90]
 
 
+def hex_linear(h: str) -> tuple[float, float, float]:
+    """#rrggbb (sRGB) → lineares RGB für Blender, normiert auf max = 1."""
+    h = str(h).lstrip("#")
+    try:
+        srgb = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+    except ValueError:
+        return (1.0, 1.0, 1.0)
+    lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb]
+    m = max(lin) or 1.0
+    return (lin[0] / m, lin[1] / m, lin[2] / m)
+
+
 def kelvin_rgb(k: float) -> tuple[float, float, float]:
     t = k / 100
     if t <= 66:
@@ -181,7 +193,7 @@ def _leuchten(bpy: Any, p: dict[str, Any]) -> None:
             continue
         spot = le.get("typ") == "spot"
         lamp = bpy.data.lights.new(f"Leuchte {i} {le.get('id', '')}", "SPOT" if spot else "POINT")
-        lamp.color = kelvin_rgb(float(le.get("kelvin", 2700)))
+        lamp.color = hex_linear(le["farbe"]) if le.get("farbe") else kelvin_rgb(float(le.get("kelvin", 2700)))
         lamp.shadow_soft_size = float(le.get("radius", 0.05))
         energie = lm / LM_PRO_W
         o = bpy.data.objects.new(lamp.name, lamp)

@@ -80,10 +80,17 @@ export function mat(farbe: string, art: Art = "glatt", extra: { name?: string; e
 }
 
 /** Leuchtende Fläche (Lampenschirm, Leuchtmittel); Intensität wird je Szenario gesetzt, daher nicht gecacht. */
-export function leuchtMat(farbe: string, kelvin = 2700): THREE.MeshStandardMaterial {
+export function leuchtMat(farbe: string, kelvin: number | THREE.Color = 2700): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    name: "Leuchte", color: new THREE.Color(farbe), roughness: 0.6, emissive: kelvinFarbe(kelvin), emissiveIntensity: 0,
+    name: "Leuchte", color: new THREE.Color(farbe), roughness: 0.6,
+    emissive: typeof kelvin === "number" ? kelvinFarbe(kelvin) : kelvin.clone(), emissiveIntensity: 0,
   });
+}
+
+/** Lichtfarbe einer Leuchte: farbmodus "farbe" → farbe_licht (#rrggbb, z. B. Hue), sonst Weiß nach kelvin. */
+export function lichtFarbe(d: any): THREE.Color {
+  if (d?.farbmodus === "farbe" && d.farbe_licht) return new THREE.Color(d.farbe_licht);
+  return kelvinFarbe(d?.kelvin ?? 2700);
 }
 
 export function kelvinFarbe(k: number): THREE.Color {

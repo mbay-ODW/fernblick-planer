@@ -126,6 +126,8 @@ export class RenderAnsicht {
         l.getWorldPosition(p);
         const anteil = l.userData.anteil ?? 1;
         const d: any = { id: eintrag.id, pos: [p.x, p.z, p.y], lumen: eintrag.lumen * anteil * dimm, kelvin: eintrag.kelvin, typ: "punkt", radius: 0.05 };
+        const ld = eintrag.daten?.licht ?? eintrag.daten;
+        if (ld?.farbmodus === "farbe" && ld.farbe_licht) d.farbe = ld.farbe_licht;
         if ((l as THREE.SpotLight).isSpotLight) {
           const s = l as THREE.SpotLight;
           s.target.getWorldPosition(t);

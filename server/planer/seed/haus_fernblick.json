@@ -344,10 +344,11 @@
    ],
    "bis": [
     3.0275,
-    5.175
+    5.0
    ],
    "dicke": 0.175,
-   "typ": "innen"
+   "typ": "innen",
+   "hinweis": "endet an der Rückseite der Holzwand (EG-IW-schlaf-sued), keine Überlappung"
   },
   {
    "id": "EG-IW-schlaf-sued",
@@ -1184,6 +1185,19 @@
    "material": "Pfosten Vierkant 40×40 und 4 Rundstäbe Stahl schwarz, Handlauf Eiche",
    "hinweis": "offene Seite oberer Lauf vom Wendelpfosten bis zur Galerie (schließt an die Glasbrüstung an)",
    "quelle": "Murat 04.11.2026 (Foto Treppe)"
+  },
+  {
+   "id": "eckleiste-schlaf-flur",
+   "typ": "eckleiste",
+   "geschoss": "EG",
+   "pos": [
+    3.115,
+    5.175
+   ],
+   "hoehe": 2.47,
+   "schenkel": 0.025,
+   "farbe_hex": "#161616",
+   "quelle": "Murat 04.11.2026: Eckleiste schwarz an der Ecke Schlafzimmer/Flur"
   }
  ],
  "moebel": [

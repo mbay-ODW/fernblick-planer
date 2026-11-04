@@ -714,6 +714,22 @@ class App {
       h("select", { onchange: (e: Event) => this.aendern((m) => (m.oberflaechen.standard.material = (e.target as HTMLSelectElement).value), "haus", "Wandmaterial Standard") },
         ...MATERIALIEN.map((m) => h("option", { value: m, selected: m === ob.standard?.material }, m))),
       h("span", { class: "dezent" }, ob.standard?.farbe ?? "")));
+    // Sockelleisten
+    const sl = { farbe_hex: "#161616", hoehe: 0.06, ohne: ["bad"], ...(ob.sockelleiste ?? {}) };
+    const setzeSl = (neu: any, notiz: string) => this.aendern((m) => (m.oberflaechen.sockelleiste = { ...(m.oberflaechen.sockelleiste ?? {}), ...neu }), "haus", notiz);
+    c.append(h("h4", {}, "Sockelleisten"), h("div", { class: "zeile" },
+      h("label", { class: "check" }, h("input", { type: "checkbox", checked: !sl.aus, onchange: (e: Event) => setzeSl({ aus: !(e.target as HTMLInputElement).checked }, "Sockelleisten an/aus") }), h("span", {}, "an")),
+      h("input", { type: "color", value: sl.farbe_hex, title: "Farbe", onchange: (e: Event) => setzeSl({ farbe_hex: (e.target as HTMLInputElement).value }, "Sockelleisten Farbe") }),
+      h("label", { class: "dezent" }, "Höhe cm"),
+      h("input", { type: "number", class: "lumen", min: 2, max: 20, step: 0.5, value: Math.round(sl.hoehe * 1000) / 10,
+        onchange: (e: Event) => setzeSl({ hoehe: Math.max(2, Number((e.target as HTMLInputElement).value)) / 100 }, "Sockelleisten Höhe") })),
+      h("div", { class: "zeile" }, h("span", { class: "dezent" }, "ohne in:"), ...this.modell.raeume.map((r: any) => h("label", { class: "check" },
+        h("input", { type: "checkbox", checked: (sl.ohne ?? []).includes(r.id), onchange: (e: Event) => {
+          const an = (e.target as HTMLInputElement).checked;
+          const ohne = new Set<string>(sl.ohne ?? []);
+          if (an) ohne.add(r.id); else ohne.delete(r.id);
+          setzeSl({ ohne: [...ohne] }, `Sockelleisten ${r.name ?? r.id}`);
+        } }), h("span", {}, r.name ?? r.id)))));
     // Böden
     c.append(h("h4", {}, "Böden"));
     const bStd = { material: "Klickvinyl", farbe: "Eiche natur", farbe_hex: "#c8a274", dielenbreite: 0.2, dielenlaenge: 1.2, richtung_grad: 0, ...(ob.boden_standard ?? {}) };
@@ -820,8 +836,7 @@ class App {
       const kelvins = [...new Set([2200, 2700, 3000, 3500, 4000, l.kelvin])].sort((x, y) => x - y);
       c.append(h("div", { class: "eintrag licht" },
         h("span", { class: "name" }, l.name, h("small", {}, ` ${l.lumen} lm`)),
-        h("select", { class: "kelvin", title: "Farbtemperatur", onchange: (ev: Event) => this.lichtSetzen(l, { kelvin: Number((ev.target as HTMLSelectElement).value) }) },
-          ...kelvins.map((k) => h("option", { value: k, selected: k === l.kelvin }, `${k} K`))),
+        ...this.lichtFarbWahl(l, kelvins),
         h("input", { type: "number", class: "lumen", title: "Lichtstrom (Lumen)", min: 0, step: 50, value: l.lumen,
           onchange: (ev: Event) => { const n = Number((ev.target as HTMLInputElement).value); if (n >= 0) this.lichtSetzen(l, { lumen: n }); } }),
         h("input", { type: "range", min: 0, max: 100, step: 5, value: v,
@@ -834,6 +849,24 @@ class App {
       h("button", { onclick: () => this.szenarioSpeichern(false) }, "Als neues Szenario"),
       e.szenario ? h("button", { onclick: () => this.szenarioSpeichern(true) }, "Szenario überschreiben") : null));
     c.append(h("p", { class: "dezent" }, "Die Deckenleuchten sind Platzhalter (Annahme), bis die Lichtplanung eingepflegt ist – über den MCP mit leuchten_setzen."));
+  }
+
+  /** Lichtfarbe: Weiß (Kelvin) oder Farbe (z. B. Hue) mit Farbwähler */
+  private lichtFarbWahl(l: any, kelvins: number[]): HTMLElement[] {
+    const d = (this.modell.moebel ?? []).find((x: any) => x.id === l.id)?.licht ?? (this.modell.leuchten ?? []).find((x: any) => x.id === l.id) ?? {};
+    const farbig = d.farbmodus === "farbe";
+    const wahl = h("select", { class: "kelvin", title: "Weiß (Farbtemperatur) oder Farbe",
+      onchange: (ev: Event) => {
+        const v = (ev.target as HTMLSelectElement).value;
+        if (v === "farbe") this.lichtSetzen(l, { farbmodus: "farbe", farbe_licht: d.farbe_licht ?? "#ff8a3d" });
+        else this.lichtSetzen(l, { kelvin: Number(v), farbmodus: "weiss" });
+      } },
+      ...kelvins.map((k) => h("option", { value: k, selected: !farbig && k === l.kelvin }, `${k} K`)),
+      h("option", { value: "farbe", selected: farbig }, "Farbe …"));
+    const out: HTMLElement[] = [wahl];
+    if (farbig) out.push(h("input", { type: "color", class: "lichtfarbe", value: d.farbe_licht ?? "#ff8a3d", title: "Lichtfarbe",
+      onchange: (ev: Event) => this.lichtSetzen(l, { farbmodus: "farbe", farbe_licht: (ev.target as HTMLInputElement).value }) }));
+    return out;
   }
 
   /** Spots einer Stromschiene: Neigung (alle oder einzeln), Seite, Abstrahlwinkel, Anzahl, Reflexion */
@@ -1071,8 +1104,13 @@ class App {
         ...(String(x.typ).startsWith("tv_board") ? [h("label", {}, "TV Zoll (0 = keiner)"), num(tvZoll(x), (v) => setze("tv_zoll", Math.max(0, Math.round(v)), `${x.name}: TV ${Math.round(v)}"`), 1)] : []),
         ...(x.licht ? [
           h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },
-            num(x.licht.kelvin ?? 2700, (v) => setze("licht", { ...x.licht, kelvin: Math.round(v) }, `${x.name}: ${Math.round(v)} K`), 100),
+            num(x.licht.kelvin ?? 2700, (v) => setze("licht", { ...x.licht, kelvin: Math.round(v), farbmodus: "weiss" }, `${x.name}: ${Math.round(v)} K`), 100),
             num(x.licht.lumen ?? 400, (v) => setze("licht", { ...x.licht, lumen: Math.max(0, Math.round(v)) }, `${x.name}: ${Math.round(v)} lm`), 50)),
+          h("label", {}, "Lichtfarbe"), h("div", { class: "zwei" },
+            h("div", { class: "chips" }, ...(["weiss", "farbe"] as const).map((v) => h("button", { class: (x.licht.farbmodus ?? "weiss") === v ? "an" : "",
+              onclick: () => setze("licht", { ...x.licht, farbmodus: v, ...(v === "farbe" && !x.licht.farbe_licht ? { farbe_licht: "#ff8a3d" } : {}) }, `${x.name}: Licht ${v}`) }, v === "weiss" ? "weiß" : "Farbe"))),
+            x.licht.farbmodus === "farbe" ? h("input", { type: "color", value: x.licht.farbe_licht ?? "#ff8a3d",
+              onchange: (e: Event) => setze("licht", { ...x.licht, farbmodus: "farbe", farbe_licht: (e.target as HTMLInputElement).value }, `${x.name}: Lichtfarbe`) }) : h("span", {})),
           ...(x.typ === "wandspot" ? [h("label", {}, "Neigung °"), num(x.licht.winkel_grad ?? 45, (v) => setze("licht", { ...x.licht, winkel_grad: Math.max(0, Math.min(180, v)) }, `${x.name}: Neigung`), 5)] : []),
           ...(x.licht.abstrahlwinkel !== undefined || /spot|leuchte_updown|schwenkarm|bilder/.test(x.typ) ? [h("label", {}, "Kegel °"), num(x.licht.abstrahlwinkel ?? 36, (v) => setze("licht", { ...x.licht, abstrahlwinkel: Math.max(10, Math.min(120, v)) }, `${x.name}: Kegel`), 5)] : []),
         ] : []),

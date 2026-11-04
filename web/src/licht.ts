@@ -5,7 +5,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 let flaechenlichtBereit = false;
-import { kelvinFarbe, leuchtMat, mat } from "./material";
+import { leuchtMat, lichtFarbe, mat } from "./material";
 import { leuchtePfad } from "./haus";
 import { MOBIL } from "./geraet";
 import type { Masse, WandInfo, P2 } from "./haus";
@@ -195,6 +195,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
     const [x, y] = le.pos ?? [M.W / 2, M.L / 2];
     const z0 = gz(le.geschoss ?? "EG");
     const kelvin = le.kelvin ?? 2700;
+    const lf = lichtFarbe(le);
     const typ = le.typ ?? "deckenspot";
     if (typ === "pendel_cluster" || typ === "pendel") {
       const n = typ === "pendel" ? 1 : le.anzahl ?? 3;
@@ -206,7 +207,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
         const r = n > 1 ? 0.22 : 0;
         const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
         const pz = unten + (n > 1 ? i * 0.14 : 0);
-        const lm = leuchtMat("#d9cfbf", kelvin);
+        const lm = leuchtMat("#d9cfbf", lf);
         mats.push(lm);
         const schirm = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), lm);
         schirm.position.set(px, pz + 0.13, py);
@@ -216,7 +217,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
         const kabel = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, decke - pz - 0.26, 6), schwarz);
         kabel.position.set(px, (decke + pz + 0.26) / 2, py);
         g.add(kabel);
-        const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 9, 2);
+        const pl = new THREE.PointLight(lf.clone(), 0, 9, 2);
         pl.position.set(px, pz + 0.06, py);
         pl.userData = { anteil: 1 / n };
         g.add(pl);
@@ -227,12 +228,12 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
       g.add(bald);
     } else if (typ === "wandleuchte" || typ === "strahler") {
       const z = z0 + (le.z ?? 1.8);
-      const lm = leuchtMat("#efe9dc", kelvin);
+      const lm = leuchtMat("#efe9dc", lf);
       mats.push(lm);
       const k = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 20), lm);
       k.position.set(x, z, y);
       g.add(k);
-      const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 8, 2);
+      const pl = new THREE.PointLight(lf.clone(), 0, 8, 2);
       pl.position.set(x, z, y);
       g.add(pl);
       lichter.push(pl);
@@ -266,13 +267,13 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
           kopf.position.copy(q);
           kopf.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
           g.add(kopf);
-          const lm = leuchtMat("#fff6e0", kelvin);
+          const lm = leuchtMat("#fff6e0", lf);
           mats.push(lm);
           const linse = new THREE.Mesh(new THREE.CircleGeometry(0.024, 16), lm);
           linse.position.copy(q).addScaledVector(dir, 0.046);
           linse.lookAt(q.clone().addScaledVector(dir, 1));
           g.add(linse);
-          const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 14, ((le.abstrahlwinkel ?? 36) / 2) * (Math.PI / 180), 0.5, 2);
+          const sp = new THREE.SpotLight(lf.clone(), 0, 14, ((le.abstrahlwinkel ?? 36) / 2) * (Math.PI / 180), 0.5, 2);
           sp.position.copy(q).addScaledVector(dir, 0.05);
           sp.target.position.copy(q).addScaledVector(dir, 3);
           sp.shadow.mapSize.set(MOBIL ? 512 : 1024, MOBIL ? 512 : 1024);
@@ -296,7 +297,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
               // die diffus in den Raum abstrahlt (keine Kegelkante wie bei einem Spot)
               const abstand = h.punkt.distanceTo(sp.position);
               const seite = Math.max(0.6, Math.min(2.2, 2 * abstand * Math.tan(sp.angle) + 0.3));
-              const rf = new THREE.RectAreaLight(kelvinFarbe(kelvin).multiply(tint), 0, seite, seite);
+              const rf = new THREE.RectAreaLight(lf.clone().multiply(tint), 0, seite, seite);
               rf.position.copy(h.punkt).addScaledVector(h.normal, 0.03);
               rf.lookAt(h.punkt.clone().addScaledVector(h.normal, 2));
               // reflektierter Anteil: Albedo × 0,8 (matte Oberfläche)
@@ -307,7 +308,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
           }
         }
       } else {
-        const lm = leuchtMat("#ffffff", kelvin);
+        const lm = leuchtMat("#ffffff", lf);
         mats.push(lm);
         for (let i = 1; i < P.length; i++) stab(P[i - 1], P[i], 0.012, 0.02, lm);
         const n = Math.max(2, Math.round(gesamt / 0.45));
@@ -316,7 +317,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
           // etwas Abstand von der Wand, damit das Licht als Streiflicht statt als Lichtpunkte ankommt
           if (raum) q.addScaledVector(raum, 0.14);
           q.y -= 0.1;
-          const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 5, 2);
+          const pl = new THREE.PointLight(lf.clone(), 0, 5, 2);
           pl.position.copy(q);
           pl.userData = { anteil: 1 / n };
           g.add(pl);
@@ -326,7 +327,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
     } else if (typ === "led_streifen") {
       const z = z0 + (le.z ?? 2.4);
       const L = le.laenge ?? 1.5;
-      const lm = leuchtMat("#ffffff", kelvin);
+      const lm = leuchtMat("#ffffff", lf);
       mats.push(lm);
       const st = new THREE.Mesh(new THREE.BoxGeometry(L, 0.012, 0.02), lm);
       st.position.set(x, z, y);
@@ -334,7 +335,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
       g.add(st);
       const nn = Math.max(1, Math.round(L / 0.8));
       for (let i = 0; i < nn; i++) {
-        const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 5, 2);
+        const pl = new THREE.PointLight(lf.clone(), 0, 5, 2);
         const t = (i + 0.5) / nn - 0.5;
         const a = ((le.rot_grad ?? 0) * Math.PI) / 180;
         pl.position.set(x + Math.cos(a) * t * L, z - 0.05, y + Math.sin(a) * t * L);
@@ -348,7 +349,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
       const aufbau = le.bauform === "aufbau";
       const z = z0 + (le.z ?? (aufbau && (le.geschoss ?? "EG") === "EG" ? M.ogZ - 0.13 : 2.6));
       const orte: P2[] = Array.isArray(le.punkte) && le.punkte.length ? le.punkte : [[x, y]];
-      const lm = leuchtMat("#fbf7ef", kelvin);
+      const lm = leuchtMat("#fbf7ef", lf);
       mats.push(lm);
       const halb = ((le.abstrahlwinkel ?? (aufbau ? 40 : 124)) / 2) * (Math.PI / 180);
       const koerper = aufbau ? mat(le.farbe_hex ?? "#151515", "metall", { name: "Aufbauspot" }) : mat("#f4f2ee", "glatt");
@@ -367,7 +368,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
           g.add(linse);
           unten -= 0.01;
         }
-        const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 12, halb, aufbau ? 0.45 : 0.65, 2);
+        const sp = new THREE.SpotLight(lf.clone(), 0, 12, halb, aufbau ? 0.45 : 0.65, 2);
         sp.position.set(px, unten, py);
         sp.target.position.set(px, unten - 3, py);
         sp.shadow.mapSize.set(MOBIL ? 512 : 1024, MOBIL ? 512 : 1024);

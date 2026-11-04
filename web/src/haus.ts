@@ -589,6 +589,129 @@ function lamellen(w: WandInfo, g: THREE.Group, koll: KollSeg[]) {
   koll.push({ ax: w.a[0], ay: w.a[1], bx: w.b[0], by: w.b[1], r: 0.05, z0: w.z0, z1: w.z0 + h });
 }
 
+interface WandLauf { ge: string; basis: number; cx: number; cy: number; ux: number; uy: number; nx: number; ny: number; laenge: number }
+
+/**
+ * Läufe entlang der Wandflächen je Raum: tastet die Raumkanten ab und liefert zusammenhängende Stücke,
+ * hinter denen eine Wand liegt (auf die Wandfläche geschoben). Optional ohne bodentiefe Öffnungen und Treppe.
+ */
+function wandLaeufe(m: any, M: Masse, waende: WandInfo[], opt: { ohne?: string[]; oeffnungen?: boolean; weg?: TreppenWeg | null;
+  kante?: (ux: number, uy: number) => boolean; geschoss?: string }, cb: (l: WandLauf) => void) {
+  const inPoly = (x: number, y: number, poly: P2[]) => {
+    let r = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) r = !r;
+    }
+    return r;
+  };
+  const wandPolyH = (w: WandInfo): P2[] => {
+    const h = w.dicke / 2 + 0.005;
+    return [[w.a[0] + w.nx * h, w.a[1] + w.ny * h], [w.b[0] + w.nx * h, w.b[1] + w.ny * h], [w.b[0] - w.nx * h, w.b[1] - w.ny * h], [w.a[0] - w.nx * h, w.a[1] - w.ny * h]];
+  };
+  for (const r of m.raeume ?? []) {
+    if ((opt.ohne ?? []).includes(r.id)) continue;
+    const ge = r.geschoss ?? "EG", basis = ge === "OG" ? M.ogZ : 0;
+    if (opt.geschoss && ge !== opt.geschoss) continue;
+    const ws = waende.filter((w) => w.geschoss === ge && w.typ !== "glasbruestung" && w.typ !== "lamellen").map((w) => ({ w, poly: wandPolyH(w) }));
+    const poly: P2[] = r.polygon;
+    let f2 = 0;
+    for (let i = 0; i < poly.length; i++) { const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length]; f2 += x1 * y2 - x2 * y1; }
+    const dreh = f2 > 0 ? 1 : -1;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L < 0.05) continue;
+      const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+      if (opt.kante && !opt.kante(ux, uy)) continue;
+      const nx = -uy * dreh, ny = ux * dreh; // ins Rauminnere
+      const schritt = 0.02, n = Math.ceil(L / schritt);
+      let lauf: { w: WandInfo; u0: number; u1: number } | null = null;
+      const abschluss = () => {
+        if (!lauf || lauf.u1 - lauf.u0 < 0.03) { lauf = null; return; }
+        const { w, u0, u1 } = lauf;
+        const pm: P2 = [a[0] + ux * (u0 + u1) / 2, a[1] + uy * (u0 + u1) / 2];
+        const sgn = nx * w.nx + ny * w.ny > 0 ? 1 : -1;
+        const sd = (pm[0] - w.a[0]) * w.nx + (pm[1] - w.a[1]) * w.ny;
+        const versatz = sgn * w.dicke / 2 - sd;
+        cb({ ge, basis, cx: pm[0] + w.nx * versatz, cy: pm[1] + w.ny * versatz, ux, uy, nx, ny, laenge: u1 - u0 });
+        lauf = null;
+      };
+      for (let k = 0; k < n; k++) {
+        const u0 = k * schritt, u1 = Math.min(L, (k + 1) * schritt), um = (u0 + u1) / 2;
+        const px = a[0] + ux * um, py = a[1] + uy * um;
+        const qx = px - nx * 0.03, qy = py - ny * 0.03;
+        let wand: WandInfo | null = null;
+        for (const { w, poly: wp } of ws) if (inPoly(qx, qy, wp)) { wand = w; break; }
+        let ok = !!wand;
+        if (wand && opt.oeffnungen) {
+          const uw = (qx - wand.a[0]) * wand.ux + (qy - wand.a[1]) * wand.uy;
+          if (wand.oeffnungen.some((o) => o.z0 < wand!.z0 + 0.1 && uw > o.u0 - 0.01 && uw < o.u1 + 0.01)) ok = false;
+        }
+        if (ok && opt.weg && ge === "EG" && opt.weg.zone(px + nx * 0.05, py + ny * 0.05)) ok = false;
+        if (ok && lauf && lauf.w === wand) lauf.u1 = u1;
+        else {
+          abschluss();
+          if (ok) lauf = { w: wand!, u0, u1 };
+        }
+      }
+      abschluss();
+    }
+  }
+}
+
+/** Leiste/Brett entlang eines Wandlaufs als Quader (Unterkante z, Höhe h, Stärke t vor der Wand). */
+function leisteGeo(l: WandLauf, z: number, h: number, t: number, vor = 0): THREE.BufferGeometry {
+  const geo = new THREE.BoxGeometry(l.laenge, h, t);
+  geo.rotateY(-Math.atan2(l.uy, l.ux));
+  geo.translate(l.cx + l.nx * (vor + t / 2), z + h / 2, l.cy + l.ny * (vor + t / 2));
+  return geo;
+}
+
+function zusammen(geos: THREE.BufferGeometry[], material: THREE.Material, name: string, ziel: THREE.Object3D) {
+  if (!geos.length) return;
+  const me = new THREE.Mesh(mergeGeometries(geos), material);
+  me.name = name;
+  me.receiveShadow = true;
+  ziel.add(me);
+}
+
+/**
+ * Sockelleisten je Raum entlang der Wandflächen (oberflaechen.sockelleiste: farbe_hex, hoehe, dicke, ohne [Raum-IDs], aus).
+ * Ausgespart: bodentiefe Öffnungen (Türen, Durchgänge, Verglasungen), Treppe, Glasbrüstung und Lamellenwand.
+ */
+function sockelleisten(m: any, M: Masse, waende: WandInfo[], weg: TreppenWeg, teile: { [k: string]: THREE.Object3D }) {
+  const s = { farbe_hex: "#161616", hoehe: 0.06, dicke: 0.013, ohne: ["bad"], ...(m.oberflaechen?.sockelleiste ?? {}) };
+  if (s.aus) return;
+  const hs = Math.max(0.02, s.hoehe), t = Math.max(0.005, s.dicke);
+  const geos: { [g: string]: THREE.BufferGeometry[] } = { EG: [], OG: [] };
+  wandLaeufe(m, M, waende, { ohne: s.ohne, oeffnungen: true, weg }, (l) => geos[l.ge].push(leisteGeo(l, l.basis + 0.002, hs, t)));
+  const material = mat(s.farbe_hex, "glatt", { name: "Sockelleiste" });
+  zusammen(geos.EG, material, "Sockelleisten EG", teile.eg);
+  zusammen(geos.OG, material, "Sockelleisten OG", teile.og);
+}
+
+/**
+ * Stellbretter: Bretter zwischen den Deckenbalken auf den Wänden quer zur Balkenlage (EG), darunter eine schwarze
+ * Leiste als Abschluss zum Putz (oberflaechen.stellbretter: aus, farbe_hex, leiste_farbe_hex, leiste_hoehe).
+ */
+function stellbretter(m: any, M: Masse, waende: WandInfo[], teile: { [k: string]: THREE.Object3D }) {
+  const s = { leiste_farbe_hex: "#161616", leiste_hoehe: 0.02, ...(m.oberflaechen?.stellbretter ?? {}) };
+  if (s.aus) return;
+  const egD = m.geschosse.find((g: any) => g.id === "EG")?.decke ?? {};
+  const schalung = M.ogZ - 0.13, bh = egD.balken_hoehe ?? 0.21;
+  const bUK = egD.balken_unterkante_z ?? schalung - bh;
+  // Balken laufen in x-Richtung → Stellbretter auf Wänden in y-Richtung
+  const quer = (ux: number, uy: number) => Math.abs(uy) > 0.7 && Math.abs(ux) < 0.7;
+  const bretter: THREE.BufferGeometry[] = [], leisten: THREE.BufferGeometry[] = [];
+  wandLaeufe(m, M, waende, { geschoss: "EG", kante: quer }, (l) => {
+    bretter.push(leisteGeo(l, bUK, schalung - bUK, 0.02));
+    leisten.push(leisteGeo(l, bUK - s.leiste_hoehe, s.leiste_hoehe, 0.012));
+  });
+  zusammen(bretter, s.farbe_hex ? mat(s.farbe_hex, "holz", { name: "Stellbrett" }) : mat(HOLZ_FICHTE, "holz", { name: "Sichtholz Fichte" }), "Stellbretter", teile.eg);
+  zusammen(leisten, mat(s.leiste_farbe_hex, "glatt", { name: "Leiste schwarz" }), "Stellbrett-Leisten", teile.eg);
+}
+
 // ---------------------------------------------------------------------------
 // Treppe (halbgewendelt) – Geometrie und Lauflinie fürs Begehen
 // ---------------------------------------------------------------------------
@@ -827,6 +950,14 @@ function festeElemente(m: any, M: Masse, g: THREE.Group, koll: KollBox[]) {
   for (const ge of m.geschosse) gz[ge.id] = ge.z ?? 0;
   for (const f of m.feste_elemente) {
     const z0 = gz[f.geschoss ?? "EG"] ?? 0;
+    if (f.typ === "eckleiste" && Array.isArray(f.pos)) {
+      // Eckschutzprofil (schwarz) an einer Außenecke, mittig auf dem Eckpunkt
+      const sch = f.schenkel ?? 0.025, h = f.hoehe ?? 2.47;
+      const e = box(sch, h, sch, mat(f.farbe_hex ?? "#161616", "glatt", { name: "Eckleiste" }), f.pos[0], f.pos[1], z0 + (f.z ?? 0) + h / 2);
+      e.userData = { art: "fest", id: f.id };
+      g.add(e);
+      continue;
+    }
     if (f.rechteck) {
       const [[x0, y0], [x1, y1]] = f.rechteck;
       const w = Math.abs(x1 - x0), d = Math.abs(y1 - y0), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -954,6 +1085,16 @@ export function hausBauen(m: any): HausErgebnis {
       hand.position.set(w.laenge / 2, w.oben(0), 0);
       hand.applyMatrix4(wandMatrix(w));
       ziel.add(hand);
+      // Bodenprofil/Blende, in dem das Glas steckt (an der Deckenkante, schwarz)
+      const pr = { ueber: 0.08, unter: 0.15, tiefe: 0.07, farbe_hex: "#141414", ...(w.daten?.profil ?? {}) };
+      if (!pr.aus) {
+        const ph = pr.ueber + pr.unter;
+        const profil = new THREE.Mesh(new THREE.BoxGeometry(w.laenge + 0.01, ph, pr.tiefe), mat(pr.farbe_hex, "metall", { name: "Glasprofil" }));
+        profil.position.set(w.laenge / 2, w.z0 + pr.ueber - ph / 2, 0);
+        profil.applyMatrix4(wandMatrix(w));
+        profil.castShadow = true;
+        ziel.add(profil);
+      }
       segs.push({ ax: w.a[0], ay: w.a[1], bx: w.b[0], by: w.b[1], r: 0.03, z0: w.z0, z1: w.z0 + 1.0 });
       continue;
     }
@@ -1157,6 +1298,10 @@ export function hausBauen(m: any): HausErgebnis {
 
   // Feste Elemente
   festeElemente(m, M, teile.eg, boxen);
+
+  // Sockelleisten, Stellbretter zwischen den Deckenbalken
+  sockelleisten(m, M, waende, weg, teile);
+  stellbretter(m, M, waende, teile);
 
   // Außenanlage: Terrasse 4 m, Hof im Osten, Wiese
   {
