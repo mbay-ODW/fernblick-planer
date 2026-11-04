@@ -2062,7 +2062,7 @@
    "id": "decke-diele",
    "typ": "deckenspot",
    "bauform": "aufbau",
-   "name": "Aufbauspots Diele (4×)",
+   "name": "Aufbauspots Diele (7×)",
    "raum": "diele",
    "geschoss": "EG",
    "punkte": [
@@ -2079,17 +2079,70 @@
      5.625
     ],
     [
-     5.3,
+     5.45,
      4.375
+    ],
+    [
+     5.45,
+     5.625
+    ],
+    [
+     3.75,
+     4.375
+    ],
+    [
+     3.75,
+     5.625
     ]
    ],
    "z": 2.68,
-   "lumen": 1920,
+   "lumen": 3360,
    "kelvin": 2700,
    "abstrahlwinkel": 40,
    "farbe_hex": "#151515",
-   "hinweis": "schwarze Aufbau-Zylinder GU10 in den Balkenfeldern; Reihe an der Haustürwand, 4. Spot vor HWR/Bad",
-   "quelle": "Foto Murat 04.11.2026; Anzahl/Lumen lt. Lichtplanung 25.05.2026 (4× 480 lm, 2700 K); Lage geschätzt"
+   "hinweis": "schwarze Aufbau-Zylinder GU10 in den Balkenfeldern; von der Haustür nach vorne Reihen 3, 2, 2",
+   "quelle": "Murat 04.11.2026 (Foto + Angabe 3/2/2 = 7 Stück); lm je Spot 480 lt. Lichtplanung 25.05.; Reihenabstand geschätzt"
+  },
+  {
+   "id": "decke-bad",
+   "typ": "deckenspot",
+   "bauform": "aufbau",
+   "name": "Aufbauspots Bad (6×)",
+   "raum": "bad",
+   "geschoss": "EG",
+   "punkte": [
+    [
+     5.99,
+     0.625
+    ],
+    [
+     7.18,
+     0.625
+    ],
+    [
+     5.99,
+     1.875
+    ],
+    [
+     7.18,
+     1.875
+    ],
+    [
+     5.99,
+     3.125
+    ],
+    [
+     7.18,
+     3.125
+    ]
+   ],
+   "z": 2.68,
+   "lumen": 2820,
+   "kelvin": 3000,
+   "abstrahlwinkel": 40,
+   "farbe_hex": "#151515",
+   "hinweis": "schwarze Aufbau-Zylinder in den Balkenfeldern, Raster 3×2",
+   "quelle": "Murat 04.11.2026 (6 Stück 3×2, schwarz Aufbau); lm/K lt. Lichtplanung 25.05. (470 lm, 3000 K); Lage geschätzt"
   },
   {
    "id": "schiene-pfette",
