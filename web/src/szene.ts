@@ -5,6 +5,7 @@ import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { hausBauen, HausErgebnis, KollBox, P2, seiteAusNormale } from "./haus";
 import { moebelBauen, istFlach } from "./moebel";
 import { Beleuchtung, leuchtenBauen, LeuchteEintrag, leuchteSetzen } from "./licht";
+import { MOBIL } from "./geraet";
 
 export type Geschossfilter = "alle" | "EG" | "OG";
 
@@ -73,8 +74,17 @@ export class Szene {
   }
 
   constructor(private behaelter: HTMLElement, private rueck: SzenenRueckrufe) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    this.renderer = new THREE.WebGLRenderer({ antialias: !MOBIL, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+    // iPhone & Co.: geringere Auflösung, sonst beendet iOS den Tab wegen Grafikspeicher
+    this.renderer.setPixelRatio(Math.min(MOBIL ? 1.5 : 2, window.devicePixelRatio));
+    this.renderer.domElement.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      const t = document.getElementById("toast");
+      if (t) {
+        t.textContent = "3D-Ansicht wurde vom Gerät beendet (Grafikspeicher) – Seite neu laden";
+        t.className = "zeigen fehler";
+      }
+    });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.shadowMap.enabled = true;
@@ -192,7 +202,7 @@ export class Szene {
     this.szenarioWerte = werte;
     // Nur die hellsten Spots werfen Schatten (Textur-Einheiten sind begrenzt)
     const an = this.leuchten.filter((l) => (werte[l.id] ?? 0) > 0).sort((a, b) => b.lumen * (werte[b.id] ?? 0) - a.lumen * (werte[a.id] ?? 0));
-    const schatten = new Set(an.slice(0, 4).map((l) => l.id));
+    const schatten = new Set(an.slice(0, MOBIL ? 1 : 4).map((l) => l.id));
     for (const l of this.leuchten) leuchteSetzen(l, werte[l.id] ?? 0, schatten.has(l.id));
     for (const l of this.moebelLichter.values()) leuchteSetzen(l, werte[l.id] ?? 0, false);
     this.renderer.shadowMap.needsUpdate = true;
@@ -495,7 +505,10 @@ export class Szene {
     this.orbit.enabled = true;
     const ziel = new THREE.Vector3(this.fuss.x, this.fuss.z + 1.2, this.fuss.y);
     this.orbit.target.copy(ziel);
-    this.kamera.position.set(ziel.x + 9, ziel.y + 11, ziel.z + 13);
+    // Hochformat (Handy): weiter weg, damit das ganze Haus ins Bild passt
+    const asp = (this.behaelter.clientWidth || 1) / (this.behaelter.clientHeight || 1);
+    const f = asp < 1 ? Math.min(2.2, 1.15 / Math.max(0.35, asp)) : 1;
+    this.kamera.position.set(ziel.x + 9 * f, ziel.y + 11 * f, ziel.z + 13 * f);
     this.kamera.fov = 55;
     this.kamera.updateProjectionMatrix();
     this.sichtbarkeit();

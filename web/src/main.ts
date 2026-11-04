@@ -9,6 +9,7 @@ import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2 } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
+import { SCHMAL } from "./geraet";
 
 type Modus = "2d" | "3d" | "render";
 type Art = "moebel" | "haus" | "licht" | "einstellungen";
@@ -83,6 +84,8 @@ class App {
       bauteilFertig: (b) => this.aendern(() => {}, "haus", `${b.id} verschoben`),
     });
     this.render = new RenderAnsicht(document.getElementById("ansichtRender")!, this);
+    // Schmale Bildschirme (Handy): Seitenleiste zu Beginn geschlossen, Bühne sichtbar
+    if (SCHMAL) document.getElementById("app")!.classList.add("ohneSeite");
     this.modell = await api.modell();
     this.basis = this.modell.meta.version;
     this.stand = JSON.stringify(this.modell);

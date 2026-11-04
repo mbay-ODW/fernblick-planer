@@ -7,6 +7,7 @@ import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLigh
 let flaechenlichtBereit = false;
 import { kelvinFarbe, leuchtMat, mat } from "./material";
 import { leuchtePfad } from "./haus";
+import { MOBIL } from "./geraet";
 import type { Masse, WandInfo } from "./haus";
 
 const RAD = Math.PI / 180;
@@ -99,7 +100,7 @@ export class Beleuchtung {
     this.sonne = new THREE.DirectionalLight(0xffffff, 3);
     this.sonne.name = "Sonne";
     this.sonne.castShadow = true;
-    this.sonne.shadow.mapSize.set(4096, 4096);
+    this.sonne.shadow.mapSize.set(MOBIL ? 2048 : 4096, MOBIL ? 2048 : 4096);
     const c = this.sonne.shadow.camera;
     c.left = -14; c.right = 14; c.top = 14; c.bottom = -14; c.near = 1; c.far = 90;
     this.sonne.shadow.bias = -0.0004;
@@ -274,7 +275,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
           const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 14, ((le.abstrahlwinkel ?? 36) / 2) * (Math.PI / 180), 0.5, 2);
           sp.position.copy(q).addScaledVector(dir, 0.05);
           sp.target.position.copy(q).addScaledVector(dir, 3);
-          sp.shadow.mapSize.set(1024, 1024);
+          sp.shadow.mapSize.set(MOBIL ? 512 : 1024, MOBIL ? 512 : 1024);
           sp.shadow.bias = -0.0008;
           const hoch = dir.y > 0.1;
           sp.userData = { spot: true, anteil: 1 / n, keinSchatten: hoch };
@@ -352,7 +353,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
       const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 12, (62 * Math.PI) / 180, 0.65, 2);
       sp.position.set(x, z - 0.02, y);
       sp.target.position.set(x, z - 3, y);
-      sp.shadow.mapSize.set(1024, 1024);
+      sp.shadow.mapSize.set(MOBIL ? 512 : 1024, MOBIL ? 512 : 1024);
       sp.shadow.bias = -0.0008;
       sp.shadow.camera.near = 0.05;
       sp.userData = { spot: true };
