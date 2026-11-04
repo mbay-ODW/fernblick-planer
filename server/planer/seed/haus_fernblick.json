@@ -57,7 +57,13 @@
     "first_achse": "y",
     "first_x": 3.89,
     "traufhoehe_z": 4.0,
-    "hinweis": "Traufhöhe 4,00 m ab FFB EG bestätigt durch Küchenansicht (4000). Innenhöhe am First rechnerisch ca. 7.04 m."
+    "hinweis": "Traufhöhe 4,00 m ab FFB EG bestätigt durch Küchenansicht (4000). Innenhöhe am First rechnerisch ca. 7.04 m.",
+    "ueberstand": {
+     "nord": 0.5,
+     "sued": 2.0,
+     "traufe": 0.0,
+     "hinweis": "traufseitig (Ost/West) kein Überstand (Murat 04.11.2026); Süd = Vordach Terrasse"
+    }
    }
   }
  ],
@@ -2180,8 +2186,7 @@
     "material": "Aluverbundplatte",
     "farbe": "hellgrau/greige matt",
     "quelle": "Foto Bad",
-    "sicher": false,
-    "gehoert_zu": "bad-dusche"
+    "sicher": false
    },
    {
     "id": "alu-bad-vorwand",
@@ -2214,8 +2219,7 @@
     "material": "Aluverbundplatte",
     "farbe": "hellgrau/greige matt",
     "quelle": "Foto Bad (Spritzschutz hinter Waschtisch)",
-    "sicher": false,
-    "gehoert_zu": "bad-wt"
+    "sicher": false
    }
   ]
  }

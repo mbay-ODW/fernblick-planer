@@ -22,7 +22,7 @@ from planer import modell as mod
 _wer: contextvars.ContextVar[str] = contextvars.ContextVar("planer_wer", default="mcp")
 
 ANLEITUNG = """Fernblick-Planer: internes 3D-Einrichtungsmodell des Ferienhauses Fernblick (Würzberg) für Murat und
-Nadja. Im Browser (planer.example.org) begehbar in 2D/3D, mit Tageszeit, Lichtszenarien und Cycles-Renderings.
+Nadja. Im Browser begehbar in 2D/3D, mit Tageszeit, Lichtszenarien und Cycles-Renderings.
 Über diesen MCP pflegst du Möbel, Möbelbibliothek, Oberflächen (Wandfarben/-materialien), Leuchten,
 Lichtszenarien, Ansichten und Varianten – z. B. aus Fotos, Konzepten oder Renderings, die der Benutzer zeigt.
 

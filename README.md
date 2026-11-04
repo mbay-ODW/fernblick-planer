@@ -3,7 +3,7 @@
 Interne Planungsansicht für das Ferienhaus Fernblick (Murat und Nadja): begehbares 3D-Modell mit Möbeln,
 Farben, Licht und Tageszeit, 2D-Grundriss, echte Renderings mit Blender Cycles und ein MCP für Claude.
 
-**Adresse:** https://planer.example.org (hinter Authelia) · **MCP:** https://planer.example.org/mcp (OAuth)
+**Adresse:** `https://<PLANER_HOST>` (hinter Forward-Auth, z. B. Authelia) · **MCP:** `https://<PLANER_HOST>/mcp` (OAuth)
 
 ## Oberfläche
 
@@ -30,7 +30,7 @@ bei gleichzeitigen Änderungen fragt die Oberfläche nach.
 server/planer/   FastAPI (REST, OAuth 2.1 + DCR/PKCE, MCP unter /mcp), Dateiablage, Render-Worker (bpy)
 server/planer/seed/haus_fernblick.json   Ausgangsmodell v0.2 (wird beim ersten Start importiert)
 web/             Vite + TypeScript + three.js 0.169
-deploy/          Portainer-Stack
+deploy/          Compose-Stack (Portainer) und .env.example
 ```
 
 Koordinaten: Meter, Ursprung Innenecke Nordwest EG, x nach Osten, y nach Süden, z nach oben; OG-Fußboden 2,81.
@@ -53,11 +53,6 @@ python -m planer.render_worker         # Worker (gleiches PLANER_DATA)
 ## Betrieb
 
 Image `ghcr.io/<owner>/fernblick-planer:sha-<commit>` aus GitHub Actions. Stack `deploy/docker-compose.yml`:
-`app` (uvicorn, Traefik) und `worker` (Cycles, ohne Netz, CPU-Limit). Daten unter `/srv/fernblick-planer/data`.
-
-| Variable | Bedeutung |
-|---|---|
-| `IMAGE_TAG` | z. B. `sha-abc1234` |
-| `PLANER_HOST` | `planer.example.org` |
-| `ALLOWED_USERS` | Authelia-Benutzer, Komma-getrennt (leer = alle) |
-| `RENDER_CPUS` / `RENDER_THREADS` | CPU-Anteil und Threads für Cycles (Standard 5) |
+`app` (uvicorn hinter Traefik) und `worker` (Cycles, ohne Netz, CPU-Limit). Alle umgebungsspezifischen Werte
+(Domain, Datenpfad, Traefik-Netz, Zertifikats-Resolver, Middlewares, Benutzer) kommen aus Variablen –
+Vorlage: `deploy/.env.example`. Im Repo stehen keine Werte einer konkreten Installation.

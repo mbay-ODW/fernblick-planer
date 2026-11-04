@@ -15,6 +15,7 @@ export interface Masse {
   tan: number;
   firstX: number;
   pfetteUK: number;
+  ueberstand: { nord: number; sued: number; traufe: number };
 }
 
 export function masse(m: any): Masse {
@@ -32,6 +33,8 @@ export function masse(m: any): Masse {
     tan: Math.tan(((dach.neigung_grad ?? 38) * Math.PI) / 180),
     firstX: dach.first_x ?? W / 2,
     pfetteUK: pf?.unterkante_z ?? 5.0,
+    // Dachüberstand (m) an Nordgiebel, Südgiebel (Vordach Terrasse) und an den Traufseiten Ost/West
+    ueberstand: { nord: dach.ueberstand?.nord ?? 0.5, sued: dach.ueberstand?.sued ?? 2.0, traufe: dach.ueberstand?.traufe ?? 0 },
   };
 }
 
@@ -1012,7 +1015,8 @@ export function hausBauen(m: any): HausErgebnis {
   // Dach: zwei Dachflächen, innen Sichtholz, außen anthrazit, Überstand Süden 2 m
   {
     const dick = 0.32;
-    const ueN = 0.5, ueS = 2.0, ueT = 0.55;
+    // mind. 4 cm (Traufbrett), sonst liegen Dachstirn und Wandaußenseite in einer Ebene und flimmern
+    const ueN = Math.max(0.04, M.ueberstand.nord), ueS = Math.max(0.04, M.ueberstand.sued), ueT = Math.max(0.04, M.ueberstand.traufe);
     const y0 = -0.36 - ueN, y1 = M.L + 0.36 + ueS;
     const aussen = mat("#3b3d40", "glatt", { name: "Dach außen" });
     const kante = mat("#2c2d2f", "glatt", { name: "Ortgang" });

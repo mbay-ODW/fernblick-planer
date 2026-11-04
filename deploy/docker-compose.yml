@@ -1,25 +1,27 @@
-# Fernblick-Planer – Stack für Portainer (Server)
-# Oberfläche hinter Authelia; /mcp, OAuth-Token/Registrierung und /.well-known öffentlich (Bearer/OAuth).
+# Fernblick-Planer – Stack für docker compose / Portainer
+# Oberfläche hinter einem Forward-Auth-Proxy (z. B. Traefik + Authelia, setzt Remote-User);
+# /mcp, OAuth-Token/Registrierung und /.well-known öffentlich (Bearer/OAuth).
+# Alle umgebungsspezifischen Werte kommen aus Variablen (siehe deploy/.env.example), keine Vorgaben im Repo.
 # Daten (Modell, Versionen, Varianten, Bilder, Render-Aufträge, OAuth-SQLite) unter ${DATEN_PFAD}.
 name: ${STACK:-fernblick-planer}
 
 x-planer: &planer
-  image: ghcr.io/${GHCR_OWNER:-<owner>}/fernblick-planer:${IMAGE_TAG:-latest}
+  image: ${IMAGE:?IMAGE fehlt (z. B. ghcr.io/<owner>/fernblick-planer)}:${IMAGE_TAG:-latest}
   restart: unless-stopped
   # tini als PID 1: Container reagieren auf SIGTERM (sonst hängt das Austauschen beim Update)
   init: true
   stop_grace_period: 20s
   environment:
     PLANER_DATA: /data
-    PLANER_PUBLIC_URL: https://${PLANER_HOST:-planer.example.org}
-    # Remote-User nur von Traefik annehmen
-    PLANER_TRUSTED_PROXIES: ${TRUSTED_PROXIES:-traefik}
-    # Authelia-Benutzer mit Zugriff (Komma-getrennt), leer = alle angemeldeten
+    PLANER_PUBLIC_URL: https://${PLANER_HOST:?PLANER_HOST fehlt}
+    # Remote-User nur vom Proxy annehmen (Containername/IP des Reverse-Proxys)
+    PLANER_TRUSTED_PROXIES: ${TRUSTED_PROXIES:?TRUSTED_PROXIES fehlt}
+    # Benutzer mit Zugriff (Komma-getrennt), leer = alle beim Proxy angemeldeten
     PLANER_ALLOWED_USERS: ${ALLOWED_USERS:-}
     PLANER_RENDER_THREADS: ${RENDER_THREADS:-5}
     TZ: Europe/Berlin
   volumes:
-    - ${DATEN_PFAD:-/srv/fernblick-planer}/data:/data
+    - ${DATEN_PFAD:?DATEN_PFAD fehlt}/data:/data
 
 services:
   app:
@@ -29,19 +31,19 @@ services:
     mem_limit: 768m
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik
+      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik}
       - traefik.http.services.${STACK:-fernblick-planer}.loadbalancer.server.port=8000
-      - traefik.http.routers.${STACK:-fernblick-planer}.rule=Host(`${PLANER_HOST:-planer.example.org}`)
+      - traefik.http.routers.${STACK:-fernblick-planer}.rule=Host(`${PLANER_HOST:?PLANER_HOST fehlt}`)
       - traefik.http.routers.${STACK:-fernblick-planer}.priority=10
       - traefik.http.routers.${STACK:-fernblick-planer}.entrypoints=websecure
-      - traefik.http.routers.${STACK:-fernblick-planer}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
-      - traefik.http.routers.${STACK:-fernblick-planer}.middlewares=${TRAEFIK_MIDDLEWARES_WEB:-authelia@file}
-      - traefik.http.routers.${STACK:-fernblick-planer}-public.rule=Host(`${PLANER_HOST:-planer.example.org}`) && (Path(`/mcp`) || PathPrefix(`/.well-known/`) || Path(`/oauth/token`) || Path(`/oauth/register`) || Path(`/api/health`))
+      - traefik.http.routers.${STACK:-fernblick-planer}.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER fehlt}
+      - traefik.http.routers.${STACK:-fernblick-planer}.middlewares=${TRAEFIK_MIDDLEWARES_WEB:?TRAEFIK_MIDDLEWARES_WEB fehlt (Forward-Auth-Middleware)}
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.rule=Host(`${PLANER_HOST:?PLANER_HOST fehlt}`) && (Path(`/mcp`) || PathPrefix(`/.well-known/`) || Path(`/oauth/token`) || Path(`/oauth/register`) || Path(`/api/health`))
       - traefik.http.routers.${STACK:-fernblick-planer}-public.priority=100
       - traefik.http.routers.${STACK:-fernblick-planer}-public.entrypoints=websecure
-      - traefik.http.routers.${STACK:-fernblick-planer}-public.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER fehlt}
       - traefik.http.routers.${STACK:-fernblick-planer}-public.service=${STACK:-fernblick-planer}
-      - traefik.http.routers.${STACK:-fernblick-planer}-public.middlewares=${STACK:-fernblick-planer}-ohne-sso,${TRAEFIK_MIDDLEWARES_PUBLIC:-ratelimit@file}
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.middlewares=${STACK:-fernblick-planer}-ohne-sso${TRAEFIK_MIDDLEWARES_PUBLIC:+,}${TRAEFIK_MIDDLEWARES_PUBLIC:-}
       # Auf öffentlichen Pfaden nie einen vom Client gesetzten Remote-User durchreichen
       - traefik.http.middlewares.${STACK:-fernblick-planer}-ohne-sso.headers.customrequestheaders.Remote-User=
       - traefik.http.middlewares.${STACK:-fernblick-planer}-ohne-sso.headers.customrequestheaders.Remote-Groups=
@@ -60,4 +62,5 @@ services:
 
 networks:
   traefik:
+    name: ${TRAEFIK_NETWORK:-traefik}
     external: true

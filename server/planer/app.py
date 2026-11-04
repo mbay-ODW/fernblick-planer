@@ -271,7 +271,7 @@ if (WEB / "index.html").exists():
         if pfad.startswith(("api/", "mcp", "oauth/")):
             raise HTTPException(404)
         if not auth.benutzer_aus_proxy(request):
-            return HTMLResponse("<p>Bitte über planer.example.org (Authelia) anmelden.</p>", status_code=401)
+            return HTMLResponse(f"<p>Bitte über {auth.basis_url()} anmelden.</p>", status_code=401)
         datei = WEB / pfad
         if pfad and datei.is_file() and WEB in datei.resolve().parents:
             return FileResponse(datei)
