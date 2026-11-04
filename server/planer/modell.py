@@ -98,7 +98,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 5
+BIBLIOTHEK_STAND = 6
 
 
 def ecksofas() -> list[dict[str, Any]]:
@@ -118,6 +118,10 @@ def haushalt() -> list[dict[str, Any]]:
         _v("trockner", "trockner", "Wäschetrockner", 0.60, 0.65, 0.85, "weiß", "Sonstiges", "Lack"),
         _v("apothekerschrank-bad", "apothekerschrank", "Bad-Apothekerschrank (Vollauszug)", 0.30, 0.45, 1.80, "weiß",
            "Stauraum", "Holz lackiert"),
+        _v("haengeschrank-bad-riffel", "haengeschrank", "Bad-Hängeschrank geriffelt 35×27×68", 0.35, 0.272, 0.68,
+           "#c8bcae", "Stauraum", "MDF matt, Knauf Messing", z=1.2, front="riffel", griff="links"),
+        _v("haengeschrank-glatt", "haengeschrank", "Hängeschrank glatt 40×30×70", 0.40, 0.30, 0.70, "weiß",
+           "Stauraum", "MDF matt", z=1.2),
     ]
 
 

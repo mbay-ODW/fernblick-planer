@@ -124,6 +124,24 @@ export function moebelBauen(m: any): MoebelObjekt {
       glas.rotation.x = Math.PI / 2;
       break;
     }
+    case "haengeschrank": {
+      // Hängeschrank mit einer Tür; front "riffel" = senkrecht geriffelte Front, Knauf rund (griff links/rechts)
+      const ft = 0.016;
+      b(w, h, d - ft, haupt, 0, h / 2, -ft / 2);
+      if ((m.front ?? "glatt") === "riffel") {
+        const n = Math.max(4, Math.round(w / 0.03));
+        const r = w / n / 2;
+        b(w, h - 0.002, 0.004, haupt, 0, h / 2, d / 2 - ft + 0.002);
+        for (let i = 0; i < n; i++) rund(g, r, h - 0.002, haupt, -w / 2 + r + i * 2 * r, h / 2, d / 2 - ft + r * 0.9, 12);
+      } else {
+        b(w - 0.003, h - 0.003, ft, haupt, 0, h / 2, d / 2 - ft / 2);
+      }
+      const gx = (m.griff === "rechts" ? 1 : -1) * (w / 2 - Math.min(0.05, w * 0.15));
+      const messing = mat(m.griff_farbe ?? "#d4b06a", "glatt", { name: "Knauf Messing" });
+      const k = rund(g, 0.014, 0.022, messing, gx, h / 2, d / 2 + 0.011, 20);
+      k.rotation.x = Math.PI / 2;
+      break;
+    }
     case "apothekerschrank": {
       // schmaler Hochschrank mit einem Vollauszug; Griffleiste oben, Sockel zurückgesetzt
       const sockel = 0.06;

@@ -27,8 +27,8 @@ const BODEN_DEKORE: [string, string, string][] = [
   ["Eiche grau", "Klickvinyl", "#a99c8a"], ["Eiche geräuchert", "Klickvinyl", "#7d6248"], ["Nussbaum", "Klickvinyl", "#6b4a33"],
   ["Steinoptik hellgrau", "Fliese", "#c9c4bb"], ["Steinoptik anthrazit", "Fliese", "#5d5b58"], ["Beton-Optik", "Beton", "#a8a49c"],
 ];
-const WANDTYPEN = /^(wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend|tv$)/;
-const TYPEN = ["waschmaschine", "trockner", "apothekerschrank", "tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
+const WANDTYPEN = /^(haengeschrank|wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend|tv$)/;
+const TYPEN = ["haengeschrank", "waschmaschine", "trockner", "apothekerschrank", "tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
   "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
   "kleiderstange", "kommode", "sideboard", "regal_niedrig", "tv_board_haengend", "wandregal", "garderobe_lamellen", "spiegel",
   "spiegel_rund", "bild", "teppich", "pflanze", "stehleuchte", "tischleuchte"];
@@ -359,7 +359,7 @@ class App {
       farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
-    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
     if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
@@ -394,9 +394,9 @@ class App {
     if (!x) return;
     this.aendern((m) => {
       const y = m.moebel.find((z: any) => z.id === x.id);
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll"]) delete y[k];
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff"]) delete y[k];
       Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
     }, "moebel", `${x.name} → ${v.name}`);
     this.tauschModus = false;
   }
@@ -1060,6 +1060,11 @@ class App {
         ...(x.typ === "ecksofa" ? [h("label", {}, "Recamiere (von vorn)"), h("div", { class: "chips" },
           ...(["links", "rechts"] as const).map((seite) => h("button", { class: (recamiereLinks(x) ? "links" : "rechts") === seite ? "an" : "",
             onclick: () => setze("recamiere", seite, `${x.name}: Recamiere ${seite}`) }, seite)))] : []),
+        ...(x.typ === "haengeschrank" ? [
+          h("label", {}, "Front"), h("div", { class: "chips" }, ...(["glatt", "riffel"] as const).map((v) => h("button", { class: (x.front ?? "glatt") === v ? "an" : "",
+            onclick: () => setze("front", v, `${x.name}: Front ${v}`) }, v === "riffel" ? "geriffelt" : "glatt"))),
+          h("label", {}, "Knauf (von vorn)"), h("div", { class: "chips" }, ...(["links", "rechts"] as const).map((v) => h("button", { class: (x.griff ?? "links") === v ? "an" : "",
+            onclick: () => setze("griff", v, `${x.name}: Knauf ${v}`) }, v)))] : []),
         ...(String(x.typ).startsWith("tv_board") ? [h("label", {}, "TV Zoll (0 = keiner)"), num(tvZoll(x), (v) => setze("tv_zoll", Math.max(0, Math.round(v)), `${x.name}: TV ${Math.round(v)}"`), 1)] : []),
         ...(x.licht ? [
           h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },

@@ -154,7 +154,7 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     esstisch_rund, couchtisch, couchtisch_rund, schreibtisch, bett, bett_einzel, kleiderschrank, kleiderstange,
     sideboard, tv_board_haengend, regal_niedrig, wandregal, nachttisch, nachttisch_haengend, schuhbank,
     garderobe_lamellen, teppich, spiegel, spiegel_rund, bild, pflanze, stehleuchte, tischleuchte, waschmaschine, trockner,
-    apothekerschrank; andere Typen
+    apothekerschrank, haengeschrank (front riffel/glatt, griff links/rechts); andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}
@@ -164,7 +164,7 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
             v = bib.get(str(e.pop("vorlage_id", "") or ""))
             if v and not any(x.get("id") == e.get("id") for x in m["moebel"]):
                 basis = {k: copy.deepcopy(v[k]) for k in ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material",
-                                                           "z", "licht", "preis_eur", "recamiere") if k in v}
+                                                           "z", "licht", "preis_eur", "recamiere", "front", "griff") if k in v}
                 basis["vorlage_id"] = v["vorlage_id"]
                 e = {**basis, **e}
             if not e.get("id") and ("pos" not in e or "masse_bth" not in e):
@@ -199,7 +199,7 @@ def moebel_tauschen(id: str, vorlage_id: str = "", daten: dict[str, Any] | None 
             if not v:
                 raise ValueError(f"Vorlage {vorlage_id} nicht gefunden")
             neu = {k: copy.deepcopy(v[k]) for k in ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", "z",
-                                                     "licht", "preis_eur", "recamiere") if k in v}
+                                                     "licht", "preis_eur", "recamiere", "front", "griff") if k in v}
             neu["vorlage_id"] = vorlage_id
         neu.update(daten or {})
         for k in ("id", "pos", "rot_grad", "raum", "geschoss"):
