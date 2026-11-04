@@ -7,7 +7,7 @@ import { bauteilFinden, bauteilVerschieben } from "./bauteile";
 import { Plan } from "./plan2d";
 import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2 } from "./haus";
-import { sonnenstand } from "./licht";
+import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
 
 type Modus = "2d" | "3d" | "render";
@@ -20,7 +20,8 @@ const PALETTE: [string, string][] = [
 ];
 const MATERIALIEN = ["Rollputz", "Glattputz", "Kalkputz", "Sichtholz", "Aluverbundplatte", "Fliese", "Beton", "Tapete"];
 const BODEN_MAT = ["Parkett", "Dielen", "Fliese", "Beton", "Teppich"];
-const TYPEN = ["sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
+const WANDTYPEN = /^(wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend)/;
+const TYPEN = ["wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
   "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
   "kleiderstange", "kommode", "sideboard", "regal_niedrig", "tv_board_haengend", "wandregal", "garderobe_lamellen", "spiegel",
   "spiegel_rund", "bild", "teppich", "pflanze", "stehleuchte", "tischleuchte"];
@@ -49,6 +50,7 @@ class App {
   katalogFilter = { suche: "", kategorie: "" };
   tauschModus = false;
   zeitAnimation = 0;
+  offeneSchienen = new Set<string>();
 
   async start() {
     const ich = await api.ich().catch(() => ({ benutzer: "?" }));
@@ -349,8 +351,33 @@ class App {
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
     for (const k of ["z", "licht", "preis_eur", "link"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
+  }
+
+  /** Wandmontiertes Teil an die nächste Wandseite setzen, Rückseite zur Wand */
+  anWand(x: any) {
+    const waende = (this.szene.haus?.waende ?? []).filter((w) => w.geschoss === x.geschoss && !["glasbruestung", "lamellen"].includes(w.typ));
+    const [px, py] = x.pos;
+    let best: { d: number; fx: number; fy: number; nx: number; ny: number } | null = null;
+    for (const w of waende) {
+      const u = Math.max(0, Math.min(w.laenge, (px - w.a[0]) * w.ux + (py - w.a[1]) * w.uy));
+      for (const s of [1, -1]) {
+        const fx = w.a[0] + w.ux * u + w.nx * s * (w.dicke / 2), fy = w.a[1] + w.uy * u + w.ny * s * (w.dicke / 2);
+        // nur die Seite, auf der der Einfügepunkt liegt
+        if (((px - fx) * w.nx + (py - fy) * w.ny) * s < -0.01) continue;
+        const d = Math.hypot(px - fx, py - fy);
+        if (!best || d < best.d) best = { d, fx, fy, nx: w.nx * s, ny: w.ny * s };
+      }
+    }
+    if (!best || best.d > 3) return;
+    const t = x.masse_bth[1];
+    x.pos = [Math.round((best.fx + best.nx * (t / 2 + 0.002)) * 1000) / 1000, Math.round((best.fy + best.ny * (t / 2 + 0.002)) * 1000) / 1000];
+    // Rückseite zeigt zur Wand (−Normale): 0 = Rückseite Nord, 90 = Ost, 180 = Süd, 270 = West
+    const bx = -best.nx, by = -best.ny;
+    x.rot_grad = Math.abs(bx) > Math.abs(by) ? (bx > 0 ? 90 : 270) : by > 0 ? 180 : 0;
+    x.raum = this.raumAn(this.modell, x.pos, x.geschoss) ?? x.raum;
   }
 
   tauschen(v: any) {
@@ -708,6 +735,7 @@ class App {
           oninput: (ev: Event) => { this.modell.einstellungen.dimmer = { ...(this.modell.einstellungen.dimmer ?? {}), [l.id]: Number((ev.target as HTMLInputElement).value) / 100 }; this.szene.szenarioAnwenden(); },
           onchange: () => this.einst(() => {}, `Dimmer ${l.name}`) }),
         h("span", { class: "dezent" }, `${v} %`)));
+      if (l.daten?.typ === "stromschiene" && (this.modell.leuchten ?? []).some((x: any) => x.id === l.id)) c.append(this.schienenEinstellung(l));
     }
     c.append(h("div", { class: "zeile" },
       h("button", { onclick: () => this.szenarioSpeichern(false) }, "Als neues Szenario"),
@@ -715,10 +743,53 @@ class App {
     c.append(h("p", { class: "dezent" }, "Die Deckenleuchten sind Platzhalter (Annahme), bis die Lichtplanung eingepflegt ist – über den MCP mit leuchten_setzen."));
   }
 
-  /** Farbtemperatur oder Lichtstrom einer Leuchte (Modell-Leuchte oder Möbel mit Licht) ändern */
-  private lichtSetzen(l: { id: string; name: string; lumen: number; kelvin: number }, felder: { kelvin?: number; lumen?: number }) {
+  /** Spots einer Stromschiene: Neigung (alle oder einzeln), Seite, Abstrahlwinkel, Anzahl, Reflexion */
+  private schienenEinstellung(l: any): HTMLElement {
+    const d = l.daten;
+    const n = Math.max(1, d.anzahl ?? 4);
+    const det = h("details", { class: "schiene", open: this.offeneSchienen.has(l.id) || undefined });
+    det.addEventListener("toggle", () => (det.open ? this.offeneSchienen.add(l.id) : this.offeneSchienen.delete(l.id)));
+    const seiten: [string, string][] = [["abwechselnd", "abwechselnd"], ["links", "links"], ["rechts", "rechts"], ...(d.wand ? [["raum", "in den Raum"] as [string, string]] : [])];
+    const aktSeite = d.spot_seite ?? (d.wand ? "raum" : "abwechselnd");
+    const winkelLabel = (w: number) => `${w}° ${w <= 20 ? "(nach unten)" : w >= 160 ? "(nach oben)" : w > 80 && w < 100 ? "(waagrecht)" : w > 100 ? "(schräg nach oben)" : "(schräg nach unten)"}`;
+    const regler = (wert: number, fn: (v: number) => void, kurz = false) => {
+      const txt = (w: number) => (kurz ? `${w}°` : winkelLabel(w));
+      const lab = h("span", { class: kurz ? "dezent kurz" : "dezent" }, txt(wert));
+      return [h("input", { type: "range", min: 0, max: 180, step: 5, value: wert, class: "breit",
+        oninput: (e: Event) => (lab.textContent = txt(Number((e.target as HTMLInputElement).value))),
+        onchange: (e: Event) => fn(Number((e.target as HTMLInputElement).value)) }), lab];
+    };
+    const w0 = spotWinkel(d, 0);
+    det.append(h("summary", {}, "Spots einstellen"),
+      h("div", { class: "zeile" }, h("label", {}, "Neigung alle"), ...regler(w0, (v) => this.lichtSetzen(l, { winkel_grad: v, spots: [] }))),
+      h("div", { class: "zeile" },
+        h("label", {}, "Seite"), h("select", { onchange: (e: Event) => this.lichtSetzen(l, { spot_seite: (e.target as HTMLSelectElement).value, spots: (d.spots ?? []).map((x: any) => ({ ...x, seite: undefined })) }) },
+          ...seiten.map(([k, t]) => h("option", { value: k, selected: k === aktSeite }, t))),
+        h("label", {}, "Kegel"), h("input", { type: "number", min: 10, max: 120, step: 5, value: d.abstrahlwinkel ?? 36, class: "lumen", title: "Abstrahlwinkel in Grad",
+          onchange: (e: Event) => this.lichtSetzen(l, { abstrahlwinkel: Number((e.target as HTMLInputElement).value) }) }),
+        h("label", {}, "Anzahl"), h("input", { type: "number", min: 1, max: 16, step: 1, value: n, class: "lumen",
+          onchange: (e: Event) => this.lichtSetzen(l, { anzahl: Math.max(1, Number((e.target as HTMLInputElement).value)) }) })),
+      h("label", { class: "zeile check" }, h("input", { type: "checkbox", checked: d.reflexion ?? w0 > 95,
+        onchange: (e: Event) => this.lichtSetzen(l, { reflexion: (e.target as HTMLInputElement).checked }) }),
+        h("span", {}, "Reflexion simulieren (angestrahltes Holz hellt den Raum auf; im Rendering physikalisch)")));
+    for (let i = 0; i < n; i++) {
+      const sp = (d.spots ?? [])[i] ?? {};
+      const setzeSpot = (felder: any) => {
+        const spots = Array.from({ length: n }, (_, k) => ({ ...((d.spots ?? [])[k] ?? {}) }));
+        Object.assign(spots[i], felder);
+        this.lichtSetzen(l, { spots });
+      };
+      det.append(h("div", { class: "zeile spot" }, h("label", {}, `Spot ${i + 1}`), ...regler(spotWinkel(d, i), (v) => setzeSpot({ winkel_grad: v }), true),
+        h("select", { onchange: (e: Event) => setzeSpot({ seite: (e.target as HTMLSelectElement).value || undefined }) },
+          h("option", { value: "" }, "wie alle"), ...seiten.map(([k, t]) => h("option", { value: k, selected: sp.seite === k }, t)))));
+    }
+    return det;
+  }
+
+  /** Farbtemperatur, Lichtstrom oder weitere Felder einer Leuchte (Modell-Leuchte oder Möbel mit Licht) ändern */
+  private lichtSetzen(l: { id: string; name: string; lumen: number; kelvin: number }, felder: Record<string, any>) {
     const istMoebel = (this.modell.moebel ?? []).some((x: any) => x.id === l.id);
-    const text = felder.kelvin ? `${felder.kelvin} K` : `${felder.lumen} lm`;
+    const text = felder.kelvin ? `${felder.kelvin} K` : felder.lumen !== undefined ? `${felder.lumen} lm` : Object.keys(felder).join(", ");
     this.aendern((m) => {
       if (istMoebel) {
         const x = m.moebel.find((y: any) => y.id === l.id);
@@ -883,6 +954,13 @@ class App {
         h("label", {}, "Farbe"), h("div", { class: "zwei" }, h("input", { type: "color", value: x.farbe_hex ?? "#a0a0a0", onchange: (e: Event) => setze("farbe_hex", (e.target as HTMLInputElement).value) }),
           h("input", { value: x.farbe ?? "", placeholder: "Farbname", onchange: (e: Event) => setze("farbe", (e.target as HTMLInputElement).value) })),
         h("label", {}, "Material"), h("input", { value: x.material ?? "", onchange: (e: Event) => setze("material", (e.target as HTMLInputElement).value) }),
+        ...(x.licht ? [
+          h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },
+            num(x.licht.kelvin ?? 2700, (v) => setze("licht", { ...x.licht, kelvin: Math.round(v) }, `${x.name}: ${Math.round(v)} K`), 100),
+            num(x.licht.lumen ?? 400, (v) => setze("licht", { ...x.licht, lumen: Math.max(0, Math.round(v)) }, `${x.name}: ${Math.round(v)} lm`), 50)),
+          ...(x.typ === "wandspot" ? [h("label", {}, "Neigung °"), num(x.licht.winkel_grad ?? 45, (v) => setze("licht", { ...x.licht, winkel_grad: Math.max(0, Math.min(180, v)) }, `${x.name}: Neigung`), 5)] : []),
+          ...(x.licht.abstrahlwinkel !== undefined || /spot|leuchte_updown|schwenkarm|bilder/.test(x.typ) ? [h("label", {}, "Kegel °"), num(x.licht.abstrahlwinkel ?? 36, (v) => setze("licht", { ...x.licht, abstrahlwinkel: Math.max(10, Math.min(120, v)) }, `${x.name}: Kegel`), 5)] : []),
+        ] : []),
         h("label", {}, "Preis €"), num(x.preis_eur ?? 0, (v) => setze("preis_eur", v || undefined), 1),
         h("label", {}, "Link"), h("input", { value: x.link ?? "", placeholder: "https://…", onchange: (e: Event) => setze("link", (e.target as HTMLInputElement).value) }),
         h("label", {}, "Notiz"), h("input", { value: x.notiz ?? "", onchange: (e: Event) => setze("notiz", (e.target as HTMLInputElement).value) })),

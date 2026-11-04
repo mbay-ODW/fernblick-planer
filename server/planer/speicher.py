@@ -60,7 +60,7 @@ def _seed() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Modell und Versionen
 # ---------------------------------------------------------------------------
-def modell_lesen() -> dict[str, Any]:
+def modell_lesen(migrieren: bool = True) -> dict[str, Any]:
     with _LOCK:
         p = daten() / "modell.json"
         if not p.exists():
@@ -73,7 +73,11 @@ def modell_lesen() -> dict[str, Any]:
                        {"version": 1, "zeit": jetzt(), "wer": "import", "notiz": "Import haus_fernblick.json v0.2",
                         "modell": m})
             return m
-        return json.loads(p.read_text())
+        m = json.loads(p.read_text())
+        if migrieren and int(m.get("meta", {}).get("bibliothek_stand", 1)) < mod.BIBLIOTHEK_STAND:
+            # einmalig: neue Katalogvorlagen (z. B. Wandleuchten) ergänzen, als eigene Version
+            m = modell_speichern(m, int(m["meta"].get("version", 1)), "migration", "Katalog: Wandleuchten ergänzt")
+        return m
 
 
 def version_aktuell() -> int:
@@ -82,7 +86,7 @@ def version_aktuell() -> int:
 
 def modell_speichern(neu: dict[str, Any], basis_version: int | None, wer: str, notiz: str = "") -> dict[str, Any]:
     with _LOCK:
-        alt = modell_lesen()
+        alt = modell_lesen(migrieren=False)
         v = int(alt["meta"].get("version", 1))
         if basis_version is not None and int(basis_version) != v:
             raise Konflikt(v)

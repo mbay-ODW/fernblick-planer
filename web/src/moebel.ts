@@ -304,6 +304,73 @@ export function moebelBauen(m: any): MoebelObjekt {
       lichter.push(pl);
       break;
     }
+    case "wandleuchte_updown":
+    case "wandleuchte":
+    case "wandleuchte_schwenkarm":
+    case "wandspot":
+    case "bilderleuchte": {
+      const kelvin = m.licht?.kelvin ?? 2700;
+      const lumen = m.licht?.lumen ?? 400;
+      const hinten = -d / 2;
+      const platte = typ === "bilderleuchte" ? 0.05 : 0.09;
+      b(platte, platte, 0.012, dunkel, 0, typ === "bilderleuchte" ? h / 2 : Math.min(h / 2, 0.12), hinten + 0.006);
+      const spot = (pos: THREE.Vector3, dir: THREE.Vector3, winkel: number, anteil: number) => {
+        const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 10, (winkel * Math.PI) / 360, 0.6, 2);
+        sp.position.copy(pos);
+        sp.target.position.copy(pos).addScaledVector(dir.normalize(), 2);
+        sp.userData = { lumen, kelvin, anteil };
+        g.add(sp, sp.target);
+        lichter.push(sp);
+      };
+      const lm = leuchtMat("#fff3df", kelvin);
+      leuchtflaechen.push(lm);
+      if (typ === "wandleuchte_updown") {
+        const r = Math.min(w, d) / 2;
+        const k = rund(g, r, h, haupt, 0, h / 2, hinten + r + 0.01, 24);
+        k.castShadow = true;
+        rund(g, r * 0.8, 0.004, lm, 0, h + 0.002, hinten + r + 0.01, 24);
+        rund(g, r * 0.8, 0.004, lm, 0, -0.002, hinten + r + 0.01, 24);
+        spot(new THREE.Vector3(0, h + 0.02, hinten + r + 0.01), new THREE.Vector3(0, 1, 0), m.licht?.abstrahlwinkel ?? 30, 0.5);
+        spot(new THREE.Vector3(0, -0.02, hinten + r + 0.01), new THREE.Vector3(0, -1, 0), m.licht?.abstrahlwinkel ?? 30, 0.5);
+      } else if (typ === "wandleuchte") {
+        b(0.015, 0.015, d * 0.45, dunkel, 0, h * 0.45, hinten + d * 0.225);
+        const schirm = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.4, w * 0.5, h * 0.7, 32, 1, true), lm);
+        (schirm.material as THREE.Material).side = THREE.DoubleSide;
+        schirm.position.set(0, h * 0.5, hinten + d * 0.55);
+        g.add(schirm);
+        const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 8, 2);
+        pl.position.set(0, h * 0.5, hinten + d * 0.55);
+        pl.userData = { lumen, kelvin, anteil: 1 };
+        g.add(pl);
+        lichter.push(pl);
+      } else if (typ === "wandleuchte_schwenkarm") {
+        const armH = h * 0.85;
+        b(0.012, 0.012, d - 0.08, dunkel, 0, armH, hinten + (d - 0.08) / 2);
+        const kopf = rund(g, 0.035, 0.12, dunkel, 0, armH - 0.06, d / 2 - 0.06, 24, 0.07);
+        kopf.castShadow = true;
+        rund(g, 0.06, 0.004, lm, 0, armH - 0.121, d / 2 - 0.06, 24);
+        spot(new THREE.Vector3(0, armH - 0.13, d / 2 - 0.06), new THREE.Vector3(0, -1, 0.1), m.licht?.abstrahlwinkel ?? 60, 1);
+      } else if (typ === "wandspot") {
+        // Kopf geneigt: winkel_grad 0 = nach unten, 90 = waagrecht nach vorn, 180 = nach oben
+        const wg = ((m.licht?.winkel_grad ?? 45) * Math.PI) / 180;
+        const dir = new THREE.Vector3(0, -Math.cos(wg), Math.sin(wg));
+        const mitte = new THREE.Vector3(0, Math.min(h / 2, 0.12), hinten + d * 0.6);
+        b(0.015, 0.015, d * 0.5, dunkel, 0, mitte.y, hinten + d * 0.25);
+        const kopf = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 20), dunkel);
+        kopf.position.copy(mitte);
+        kopf.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.clone().normalize());
+        kopf.castShadow = true;
+        g.add(kopf);
+        spot(mitte.clone().addScaledVector(dir, 0.06), dir, m.licht?.abstrahlwinkel ?? 36, 1);
+      } else {
+        // Bilderleuchte: Leiste über dem Bild, strahlt schräg nach unten auf die Wand
+        b(0.012, 0.012, d, dunkel, 0, h / 2, hinten + d / 2);
+        b(w, 0.03, 0.05, dunkel, 0, h / 2, hinten + d);
+        b(w * 0.95, 0.004, 0.03, lm, 0, h / 2 - 0.016, hinten + d);
+        spot(new THREE.Vector3(0, h / 2 - 0.03, hinten + d), new THREE.Vector3(0, -1, -0.45), m.licht?.abstrahlwinkel ?? 60, 1);
+      }
+      break;
+    }
     case "kleiderstange": {
       for (const s of [-1, 1]) b(0.025, h, 0.025, dunkel, s * (w / 2 - 0.02), h / 2, 0);
       b(w, 0.025, 0.025, dunkel, 0, h - 0.02, 0);

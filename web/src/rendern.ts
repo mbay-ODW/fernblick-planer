@@ -122,6 +122,7 @@ export class RenderAnsicht {
     const p = new THREE.Vector3(), t = new THREE.Vector3();
     for (const { eintrag, dimm } of sz.aktiveLeuchten()) {
       for (const l of eintrag.lichter) {
+        if (l.userData.reflex) continue; // Reflexionshilfe nur für die Live-Ansicht, Cycles rechnet echte Reflexion
         l.getWorldPosition(p);
         const anteil = l.userData.anteil ?? 1;
         const d: any = { id: eintrag.id, pos: [p.x, p.z, p.y], lumen: eintrag.lumen * anteil * dimm, kelvin: eintrag.kelvin, typ: "punkt", radius: 0.05 };

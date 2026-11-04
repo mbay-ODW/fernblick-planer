@@ -94,6 +94,25 @@ def standard_bibliothek() -> list[dict[str, Any]]:
            licht={"lumen": 800, "kelvin": 2700}),
         _v("tischleuchte", "tischleuchte", "Tischleuchte", 0.25, 0.25, 0.45, "schwarz", "Leuchten",
            licht={"lumen": 400, "kelvin": 2700}),
+    ] + wandleuchten()
+
+
+BIBLIOTHEK_STAND = 2
+
+
+def wandleuchten() -> list[dict[str, Any]]:
+    """Wandleuchten (z = Montagehöhe Unterkante); werden beim Einfügen an die nächste Wand gesetzt."""
+    return [
+        _v("wandleuchte-updown", "wandleuchte_updown", "Wandleuchte Up/Down", 0.08, 0.10, 0.20, "schwarz", "Leuchten",
+           "Metall", z=1.8, licht={"lumen": 600, "kelvin": 2700, "abstrahlwinkel": 30}),
+        _v("wandleuchte-schirm", "wandleuchte", "Wandleuchte mit Stoffschirm", 0.25, 0.25, 0.25, "natur", "Leuchten",
+           "Stoff/Metall", z=1.6, licht={"lumen": 450, "kelvin": 2700}),
+        _v("leseleuchte-wand", "wandleuchte_schwenkarm", "Leseleuchte Wand (Schwenkarm)", 0.15, 0.50, 0.35, "schwarz",
+           "Leuchten", "Metall", z=0.9, licht={"lumen": 350, "kelvin": 2700, "abstrahlwinkel": 60}),
+        _v("wandspot", "wandspot", "Wandspot (schwenkbar)", 0.10, 0.15, 0.12, "schwarz", "Leuchten", "Metall", z=2.1,
+           licht={"lumen": 400, "kelvin": 2700, "winkel_grad": 45, "abstrahlwinkel": 36}),
+        _v("bilderleuchte", "bilderleuchte", "Bilderleuchte", 0.60, 0.20, 0.08, "schwarz", "Leuchten", "Metall", z=1.9,
+           licht={"lumen": 300, "kelvin": 3000, "abstrahlwinkel": 60}),
     ]
 
 
@@ -276,6 +295,10 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
          "kamera": {"pos": [6.2, 4.46, 3.0], "ziel": [3.0, 2.0, 9.5], "fov": 60}},
     ])
     m.setdefault("bibliothek", standard_bibliothek())
+    if int(meta.get("bibliothek_stand", 1)) < BIBLIOTHEK_STAND:
+        vorhanden = {v.get("vorlage_id") for v in m["bibliothek"]}
+        m["bibliothek"] += [v for v in wandleuchten() if v["vorlage_id"] not in vorhanden]
+        meta["bibliothek_stand"] = BIBLIOTHEK_STAND
     m.setdefault("einstellungen", {"breitengrad": 49.654, "laengengrad": 9.077, "datum": "2026-06-21",
                                    "uhrzeit": "17:00", "szenario": "aus", "belichtung": 1.0})
     return m

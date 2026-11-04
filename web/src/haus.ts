@@ -577,7 +577,8 @@ export function treppenWeg(m: any, M: Masse): TreppenWeg {
   const sVon = (x: number, y: number) => {
     if (y >= cy && x > cx) return Math.max(0, uX1 - x);
     if (x <= cx) {
-      const phi = Math.atan2(-(x - cx), y - cy);
+      // cx − x statt −(x − cx): bei x = cx sonst −0 und atan2 liefert −π statt π (oberer Lauf am Wendel)
+      const phi = Math.atan2(cx - x, y - cy);
       return l1 + r * Math.max(0, Math.min(Math.PI, phi));
     }
     return l1 + l2 + Math.min(l3, x - cx);
@@ -678,34 +679,60 @@ function treppeBauen(weg: TreppenWeg, g: THREE.Group) {
 function gelaenderBauen(m: any, M: Masse, weg: TreppenWeg, ziele: Record<string, THREE.Group>, segs: KollSeg[]) {
   const stahl = mat("#1d1d1d", "metall", { name: "Geländer Stahl schwarz" });
   const eiche = mat(EICHE, "holz", { name: "Handlauf Eiche" });
-  for (const f of m.feste_elemente ?? []) {
-    if (!String(f.typ).startsWith("gelaender") || !Array.isArray(f.punkte) || f.punkte.length < 2) continue;
+  const alle = (m.feste_elemente ?? []).filter((f: any) => String(f.typ).startsWith("gelaender") && Array.isArray(f.punkte) && f.punkte.length >= 2);
+  // Treppengeländer, deren Enden nah beieinander liegen (Wendel), teilen sich einen hohen Pfosten
+  // (wie im Foto: unterer Handlauf endet daran, oberer beginnt oben am selben Pfosten)
+  const enden = alle.filter((f: any) => f.folgt === "treppe").flatMap((f: any) =>
+    [0, f.punkte.length - 1].map((idx) => ({ f, idx, p: f.punkte[idx] as P2, z: weg.lauf(f.punkte[idx][0], f.punkte[idx][1]) })));
+  const gemeinsam = new Map<string, { xy: P2; oben: number; gezeichnet: boolean; ziel: string; bx: number; by: number }>();
+  for (const e of enden) {
+    for (const o of enden) {
+      if (o.f === e.f || Math.hypot(o.p[0] - e.p[0], o.p[1] - e.p[1]) > 0.16) continue;
+      const key = [e, o].map((x) => `${x.f.id}:${x.idx}`).sort().join("|");
+      // Pfosten so breit, dass er beide Wangen erreicht
+      const g = gemeinsam.get(key) ?? { xy: [(e.p[0] + o.p[0]) / 2, (e.p[1] + o.p[1]) / 2] as P2, oben: 0, gezeichnet: false, ziel: e.f.geschoss ?? "EG",
+        bx: Math.abs(e.p[0] - o.p[0]) + 0.04, by: Math.abs(e.p[1] - o.p[1]) + 0.04 };
+      g.oben = Math.max(g.oben, e.z + (e.f.hoehe ?? 0.9) - 0.02, o.z + (o.f.hoehe ?? 0.9) - 0.02);
+      gemeinsam.set(key, g);
+      gemeinsam.set(`${e.f.id}:${e.idx}`, g);
+    }
+  }
+  const pfosten = (sub: THREE.Group, x: number, y: number, unten: number, oben: number, bx = 0.04, by = 0.04) => {
+    const me = new THREE.Mesh(new THREE.BoxGeometry(bx, oben - unten, by), stahl);
+    me.position.copy(v3(x, y, (unten + oben) / 2));
+    me.castShadow = true;
+    sub.add(me);
+  };
+  for (const f of alle) {
     const ge = f.geschoss ?? "EG";
     const basis = ge === "OG" ? M.ogZ : 0;
     const hoehe = f.hoehe ?? 0.9;
     const staebe = f.staebe ?? 4;
     const treppe = f.folgt === "treppe";
-    const zAn = (p: P2) => (treppe ? weg.lauf(p[0], p[1]) : basis);
+    // Höhe aus den Originalpunkten, Lage ggf. am gemeinsamen Pfosten
+    const zs: number[] = f.punkte.map((p: P2) => (treppe ? weg.lauf(p[0], p[1]) : basis));
+    const pts: P2[] = f.punkte.map((p: P2, idx: number) => gemeinsam.get(`${f.id}:${idx}`)?.xy ?? p);
     const sub = new THREE.Group();
     sub.userData = { art: "fest", id: f.id };
-    const balken = (a: THREE.Vector3, b: THREE.Vector3, quer: [number, number], m2: THREE.Material, rund = false) => {
-      const L = a.distanceTo(b);
-      const geo = rund ? new THREE.CylinderGeometry(quer[0] / 2, quer[0] / 2, L, 10) : new THREE.BoxGeometry(quer[0], L, quer[1]);
-      const me = new THREE.Mesh(geo, m2);
+    const balken = (a: THREE.Vector3, b: THREE.Vector3, d: number) => {
+      const me = new THREE.Mesh(new THREE.CylinderGeometry(d / 2, d / 2, a.distanceTo(b), 10), stahl);
       me.position.copy(a).add(b).multiplyScalar(0.5);
       me.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
       me.castShadow = true;
       sub.add(me);
     };
-    for (let i = 0; i + 1 < f.punkte.length; i++) {
-      const a: P2 = f.punkte[i], b: P2 = f.punkte[i + 1];
-      const za = zAn(a), zb = zAn(b);
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const za = zs[i], zb = zs[i + 1];
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
       const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
-      // Handlauf etwas über die Endpfosten hinaus
-      const ue = 0.05;
-      const ha = v3(a[0] - ux * ue, a[1] - uy * ue, za + hoehe - ((zb - za) / L) * ue);
-      const hb = v3(b[0] + ux * ue, b[1] + uy * ue, zb + hoehe + ((zb - za) / L) * ue);
+      const ga = i === 0 ? gemeinsam.get(`${f.id}:0`) : undefined;
+      const gb = i + 2 === pts.length ? gemeinsam.get(`${f.id}:${pts.length - 1}`) : undefined;
+      // Handlauf: an gemeinsamen Pfosten bis zur Pfostenmitte, sonst etwas überstehend
+      const ueA = ga ? 0 : 0.05, ueB = gb ? 0 : 0.05;
+      const st = (zb - za) / L;
+      const ha = v3(a[0] - ux * ueA, a[1] - uy * ueA, za + hoehe - st * ueA);
+      const hb = v3(b[0] + ux * ueB, b[1] + uy * ueB, zb + hoehe + st * ueB);
       const hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, ha.distanceTo(hb)), eiche);
       hand.position.copy(ha).add(hb).multiplyScalar(0.5);
       hand.lookAt(hb);
@@ -713,20 +740,25 @@ function gelaenderBauen(m: any, M: Masse, weg: TreppenWeg, ziele: Record<string,
       sub.add(hand);
       for (let k = 1; k <= staebe; k++) {
         const dz = hoehe - 0.06 - (k * (hoehe - 0.18)) / staebe;
-        balken(v3(a[0], a[1], za + dz), v3(b[0], b[1], zb + dz), [0.012, 0.012], stahl, true);
+        balken(v3(a[0], a[1], za + dz), v3(b[0], b[1], zb + dz), 0.012);
       }
       const nP = Math.max(1, Math.round(L / 1.0));
       for (let k = 0; k <= nP; k++) {
         if (k === 0 && i > 0) continue;
         const t = k / nP;
         const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, z = za + (zb - za) * t;
-        let unten = treppe ? Math.max(0, z - 0.32) : basis;
-        let oben = z + hoehe - 0.02;
-        // Antrittspfosten jedes Treppengeländers steht auf dem Boden (oberer Lauf: Pfosten am Wendel)
-        if (treppe && i === 0 && k === 0) unten = 0;
-        balken(v3(x, y, unten), v3(x, y, oben), [0.04, 0.04], stahl);
+        const g = k === 0 ? ga : k === nP ? gb : undefined;
+        if (g) {
+          if (!g.gezeichnet) {
+            pfosten(sub, g.xy[0], g.xy[1], 0, g.oben, g.bx, g.by);
+            g.gezeichnet = true;
+          }
+          continue;
+        }
+        // Pfosten enden in der Wange (Wange reicht bis 0,30 m unter die Steigungslinie); Antritt steht auf dem Boden
+        const unten = !treppe ? basis : i === 0 && k === 0 ? 0 : Math.max(0, z - 0.22);
+        pfosten(sub, x, y, unten, z + hoehe - 0.02);
       }
-      // Kollision stückweise (Neigung)
       const teile = Math.max(1, Math.ceil(L / 0.25));
       for (let k = 0; k < teile; k++) {
         const t0 = k / teile, t1 = (k + 1) / teile;

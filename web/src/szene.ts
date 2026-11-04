@@ -118,7 +118,20 @@ export class Szene {
 
   leuchtenNeu(m: any) {
     this.szene.remove(this.leuchtenGruppe);
-    const { gruppe, eintraege } = leuchtenBauen(m, this.haus.masse, this.haus.waende);
+    this.haus.gruppe.updateMatrixWorld(true);
+    const rc = new THREE.Raycaster();
+    const treffer = (pos: THREE.Vector3, d: THREE.Vector3) => {
+      rc.set(pos, d);
+      rc.far = 12;
+      const h = rc.intersectObject(this.haus.gruppe, true).find((x) => x.object.userData.art !== "glas" && x.face);
+      if (!h || !h.face) return null;
+      const n = h.face.normal.clone().transformDirection(h.object.matrixWorld);
+      if (n.dot(d) > 0) n.negate();
+      const mm = Array.isArray((h.object as THREE.Mesh).material) ? ((h.object as THREE.Mesh).material as THREE.Material[])[h.face.materialIndex] : (h.object as THREE.Mesh).material;
+      const farbe = ((mm as THREE.MeshStandardMaterial).color ?? new THREE.Color(0.7, 0.7, 0.7)).clone();
+      return { punkt: h.point.clone(), normal: n, farbe };
+    };
+    const { gruppe, eintraege } = leuchtenBauen(m, this.haus.masse, this.haus.waende, treffer);
     this.leuchtenGruppe = gruppe;
     this.leuchten = eintraege;
     this.szene.add(gruppe);

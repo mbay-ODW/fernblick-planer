@@ -140,7 +140,46 @@ export class Beleuchtung {
 // ---------------------------------------------------------------------------
 // Leuchten aus dem Modell
 // ---------------------------------------------------------------------------
-export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = []): { gruppe: THREE.Group; eintraege: LeuchteEintrag[] } {
+export type Treffer = (p: THREE.Vector3, d: THREE.Vector3) => { punkt: THREE.Vector3; normal: THREE.Vector3; farbe: THREE.Color } | null;
+
+/**
+ * Richtung eines Spots an der Stromschiene. winkel_grad: 0 = senkrecht nach unten, 90 = waagrecht, 180 = nach oben.
+ * spot_seite: "abwechselnd" | "links" | "rechts" | "raum" (Wandschiene: in den Raum). Je Spot überschreibbar über
+ * spots[i] = { winkel_grad, seite }. Ohne winkel_grad gelten die alten Felder ausrichtung/neigung.
+ */
+export function spotRichtung(le: any, i: number, raum: THREE.Vector3 | null, schiene: THREE.Vector3): THREE.Vector3 {
+  const einzel = (le.spots ?? [])[i] ?? {};
+  let w: number | undefined = einzel.winkel_grad ?? le.winkel_grad;
+  if (w === undefined || w === null) {
+    const nb = le.neigung ?? (le.ausrichtung === "oben" ? 1.4 : raum ? 0.7 : 0.35);
+    const g = (Math.atan(nb) * 180) / Math.PI;
+    w = le.ausrichtung === "oben" ? 180 - g : g;
+  }
+  const seite: string = einzel.seite ?? le.spot_seite ?? (raum ? "raum" : "abwechselnd");
+  const t = schiene.clone().setY(0);
+  if (t.lengthSq() < 1e-8) t.set(0, 0, 1);
+  t.normalize();
+  const quer = new THREE.Vector3(-t.z, 0, t.x); // links der Schienenrichtung
+  let seitlich: THREE.Vector3;
+  if (seite === "raum" && raum) seitlich = raum.clone();
+  else if (seite === "links") seitlich = quer;
+  else if (seite === "rechts") seitlich = quer.negate();
+  else seitlich = i % 2 ? quer.negate() : quer;
+  const r = (w * Math.PI) / 180;
+  return new THREE.Vector3(0, -Math.cos(r), 0).addScaledVector(seitlich, Math.sin(r)).normalize();
+}
+
+/** Aktueller Neigungswinkel eines Spots (0 = unten, 180 = oben) – für die Oberfläche */
+export function spotWinkel(le: any, i: number): number {
+  const e = (le.spots ?? [])[i]?.winkel_grad;
+  if (e !== undefined && e !== null) return e;
+  if (le.winkel_grad !== undefined && le.winkel_grad !== null) return le.winkel_grad;
+  const nb = le.neigung ?? (le.ausrichtung === "oben" ? 1.4 : le.wand ? 0.7 : 0.35);
+  const g = (Math.atan(nb) * 180) / Math.PI;
+  return Math.round(le.ausrichtung === "oben" ? 180 - g : g);
+}
+
+export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer?: Treffer): { gruppe: THREE.Group; eintraege: LeuchteEintrag[] } {
   const g = new THREE.Group();
   g.name = "Leuchten";
   const eintraege: LeuchteEintrag[] = [];
@@ -217,16 +256,8 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = []): { grup
         const n = Math.max(1, le.anzahl ?? Math.round(gesamt / 0.9));
         for (let i = 0; i < n; i++) {
           const q = an(((i + 0.5) / n) * gesamt).add(new THREE.Vector3(0, -0.07, 0));
-          // Ausrichtung: in den Raum geneigt (Wand) bzw. abwechselnd zu beiden Seiten (Pfette)
-          const dir = new THREE.Vector3(0, -1, 0);
-          if (le.ausrichtung === "oben") {
-            // indirekt: nach oben ins Gebälk, abwechselnd auf beide Dachseiten (bzw. von der Wand weg schräg nach oben)
-            dir.set(0, 1, 0);
-            if (raum) dir.addScaledVector(raum, le.neigung ?? 1.4);
-            else dir.x += (i % 2 ? 1 : -1) * (le.neigung ?? 1.4);
-          } else if (raum) dir.addScaledVector(raum, le.neigung ?? 0.7);
-          else dir.x += (i % 2 ? 1 : -1) * (le.neigung ?? 0.35);
-          dir.normalize();
+          const s0 = an(((i + 0.5) / n) * gesamt), s1 = an(Math.min(gesamt, ((i + 0.5) / n) * gesamt + 0.05));
+          const dir = spotRichtung(le, i, raum, s1.sub(s0));
           const kopf = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.09, 16), schwarz);
           kopf.position.copy(q);
           kopf.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
@@ -242,9 +273,26 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = []): { grup
           sp.target.position.copy(q).addScaledVector(dir, 3);
           sp.shadow.mapSize.set(1024, 1024);
           sp.shadow.bias = -0.0008;
-          sp.userData = { spot: true, anteil: 1 / n, keinSchatten: le.ausrichtung === "oben" };
+          const hoch = dir.y > 0.1;
+          sp.userData = { spot: true, anteil: 1 / n, keinSchatten: hoch };
           g.add(sp, sp.target);
           lichter.push(sp);
+          // Indirektes Licht: wo ein nach oben gerichteter Spot auf Holz/Wand trifft, eine weiche „Reflexionsleuchte“
+          // (three.js rechnet keine Lichtreflexion; Cycles schon – dort wird sie nicht exportiert)
+          if ((le.reflexion ?? hoch) && treffer) {
+            const h = treffer(sp.position.clone(), dir.clone());
+            if (h) {
+              const albedo = (h.farbe.r * 0.2126 + h.farbe.g * 0.7152 + h.farbe.b * 0.0722);
+              const rf = new THREE.SpotLight(kelvinFarbe(kelvin).multiply(h.farbe.clone().multiplyScalar(1 / Math.max(0.05, Math.max(h.farbe.r, h.farbe.g, h.farbe.b)))),
+                0, 12, (80 * Math.PI) / 180, 1, 2);
+              rf.position.copy(h.punkt).addScaledVector(h.normal, 0.25);
+              rf.target.position.copy(h.punkt).addScaledVector(h.normal, 3);
+              // reflektierter Anteil: Albedo × 0,8 (matte Oberfläche), auf die Halbkugel verteilt
+              rf.userData = { spot: true, anteil: (1 / n) * Math.min(0.9, albedo * 0.8), keinSchatten: true, reflex: true };
+              g.add(rf, rf.target);
+              lichter.push(rf);
+            }
+          }
         }
       } else {
         const lm = leuchtMat("#ffffff", kelvin);
