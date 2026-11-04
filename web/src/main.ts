@@ -825,7 +825,14 @@ class App {
         onchange: (e: Event) => fn(Number((e.target as HTMLInputElement).value)) }), lab];
     };
     const w0 = spotWinkel(d, 0);
-    det.append(h("summary", {}, "Spots einstellen"),
+    const hoeheZeile = d.wand ? [h("div", { class: "zeile" },
+      h("label", {}, "Höhe"), h("input", { type: "number", min: 0.5, max: 8, step: 0.05, value: typeof d.hoehe === "number" ? d.hoehe : "", placeholder: "oben", class: "lumen",
+        title: "Montagehöhe über Fußboden in m (Schiene waagrecht). Leer = an der Wandoberkante entlang",
+        onchange: (e: Event) => { const v = parseFloat((e.target as HTMLInputElement).value.replace(",", ".")); this.lichtSetzen(l, { hoehe: isNaN(v) ? undefined : v }); } }),
+      h("label", {}, "Abstand oben"), h("input", { type: "number", min: 0, max: 3, step: 0.05, value: d.abstand_oben ?? 0.06, class: "lumen",
+        title: "Abstand unter der Wandoberkante in m (wenn keine Höhe gesetzt ist)",
+        onchange: (e: Event) => { const v = parseFloat((e.target as HTMLInputElement).value.replace(",", ".")); if (!isNaN(v)) this.lichtSetzen(l, { abstand_oben: Math.max(0, v), hoehe: undefined }); } }))] : [];
+    det.append(h("summary", {}, "Spots einstellen"), ...hoeheZeile,
       h("div", { class: "zeile" }, h("label", {}, "Neigung alle"), ...regler(w0, (v) => this.lichtSetzen(l, { winkel_grad: v, spots: [] }))),
       h("div", { class: "zeile" },
         h("label", {}, "Seite"), h("select", { onchange: (e: Event) => this.lichtSetzen(l, { spot_seite: (e.target as HTMLSelectElement).value, spots: (d.spots ?? []).map((x: any) => ({ ...x, seite: undefined })) }) },
@@ -861,7 +868,10 @@ class App {
         x.licht = { lumen: l.lumen, kelvin: l.kelvin, ...(x.licht ?? {}), ...felder };
       } else {
         const le = (m.leuchten ?? []).find((y: any) => y.id === l.id);
-        if (le) Object.assign(le, felder);
+        if (le) {
+          Object.assign(le, felder);
+          for (const k of Object.keys(felder)) if (felder[k] === undefined) delete le[k];
+        }
       }
     }, istMoebel ? "moebel" : "licht", `${l.name}: ${text}`);
   }

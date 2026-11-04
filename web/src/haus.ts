@@ -333,7 +333,8 @@ export function seiteVon(f: any, w: WandInfo, m: any): "plus" | "minus" {
 /**
  * Verlauf einer Linienleuchte (LED-Streifen, Stromschiene) in Modellkoordinaten mit absoluter Höhe.
  *  - an: "pfette"              → Unterseite der Pfette, bereich = [y von, y bis]
- *  - wand + seite              → entlang der Wandoberkante (folgt der Dachschräge), abstand_oben, abstand_wand
+ *  - wand + seite              → entlang der Wandoberkante (folgt der Dachschräge), abstand_oben, abstand_wand;
+ *                                 mit hoehe (über Geschossboden) waagrecht in dieser Höhe
  *  - pfad [[x, y, z], …]       → z über Geschossboden
  * Liefert außerdem die Richtung in den Raum (Normale der Wandseite) für schräg ausgerichtete Spots.
  */
@@ -355,7 +356,10 @@ export function leuchtePfad(le: any, M: Masse, waende: WandInfo[]): { punkte: [n
     const n = 24;
     for (let i = 0; i <= n; i++) {
       const u = uA + ((uB - uA) * i) / n;
-      punkte.push([w.a[0] + w.ux * u + w.nx * s * ab, w.a[1] + w.uy * u + w.ny * s * ab, w.oben(u) - (le.abstand_oben ?? 0.06)]);
+      // hoehe (über Geschossboden) = waagrecht montiert, höchstens bis knapp unter die Wandoberkante
+      const oben = w.oben(u) - (le.abstand_oben ?? 0.06);
+      const z = typeof le.hoehe === "number" ? Math.min(basis + le.hoehe, w.oben(u) - 0.03) : oben;
+      punkte.push([w.a[0] + w.ux * u + w.nx * s * ab, w.a[1] + w.uy * u + w.ny * s * ab, z]);
     }
     return { punkte, raum: [w.nx * s, w.ny * s] };
   }
