@@ -6,6 +6,9 @@ name: ${STACK:-fernblick-planer}
 x-planer: &planer
   image: ghcr.io/${GHCR_OWNER:-<owner>}/fernblick-planer:${IMAGE_TAG:-latest}
   restart: unless-stopped
+  # tini als PID 1: Container reagieren auf SIGTERM (sonst hängt das Austauschen beim Update)
+  init: true
+  stop_grace_period: 20s
   environment:
     PLANER_DATA: /data
     PLANER_PUBLIC_URL: https://${PLANER_HOST:-planer.example.org}
