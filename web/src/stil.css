@@ -155,6 +155,7 @@ svg.plan { width: 100%; height: 100%; display: block; background: #fbfaf7; touch
 .plan .griffstiel { stroke: var(--gelb); stroke-width: .015; }
 .plan .drehgriff { fill: #fff; stroke: var(--gelb); stroke-width: .03; cursor: alias; }
 .plan .leuchten circle { fill: #fff7d6; stroke: #c9a227; stroke-width: .012; }
+.plan .leuchten circle.aufbau { fill: #1d1d1d; stroke: #c9a227; }
 .plan .leuchten line { stroke: #c9a227; stroke-width: .01; }
 .plan .masskette line { stroke: #d1495b; stroke-width: .012; }
 .plan .mass { font-size: .14px; fill: #d1495b; text-anchor: middle; }

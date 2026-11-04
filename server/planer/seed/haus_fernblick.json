@@ -640,24 +640,26 @@
    ],
    "hoehe": 2.01,
    "bruestung": 0,
-   "anschlag": "in den Raum",
-   "sicher": false
+   "sicher": false,
+   "aufschlag": "schlafen"
   },
   {
    "id": "T-hwr",
    "geschoss": "EG",
    "typ": "tuer",
    "p1": [
-    4.24,
+    3.215,
     3.63
    ],
    "p2": [
-    5.09,
+    4.065,
     3.63
    ],
    "hoehe": 2.01,
    "bruestung": 0,
-   "sicher": false
+   "sicher": false,
+   "aufschlag": "hwr",
+   "quelle": "Murat 04.11.2026: Position nach links (Ecke) geändert; 10 cm Abstand zur Wand angenommen"
   },
   {
    "id": "T-bad",
@@ -673,7 +675,8 @@
    ],
    "hoehe": 2.01,
    "bruestung": 0,
-   "sicher": false
+   "sicher": false,
+   "aufschlag": "bad"
   },
   {
    "id": "D-diele-wohnen",
@@ -1627,7 +1630,7 @@
     0.06
    ],
    "pos": [
-    3.65,
+    4.65,
     3.93
    ],
    "rot_grad": 0,
@@ -1636,7 +1639,7 @@
    "verschiebbar": true,
    "quelle": "Render",
    "z": 0.9,
-   "hinweis": "Render zeigt Bord links neben der Haustür an der Badwand; dort schlägt die Haustür auf → an HWR-Wand westlich der HWR-Tür verlegt"
+   "hinweis": "rechts neben die HWR-Tür versetzt (Tür sitzt jetzt in der Ecke)"
   },
   {
    "id": "d-laeufer",
@@ -2054,6 +2057,39 @@
    "anordnung": "kreisförmig, gestaffelt",
    "unterkante_ueber_tisch": 0.7,
    "quelle": "Murat 02.11."
+  },
+  {
+   "id": "decke-diele",
+   "typ": "deckenspot",
+   "bauform": "aufbau",
+   "name": "Aufbauspots Diele (4×)",
+   "raum": "diele",
+   "geschoss": "EG",
+   "punkte": [
+    [
+     7.15,
+     4.375
+    ],
+    [
+     7.15,
+     5.0
+    ],
+    [
+     7.15,
+     5.625
+    ],
+    [
+     5.3,
+     4.375
+    ]
+   ],
+   "z": 2.68,
+   "lumen": 1920,
+   "kelvin": 2700,
+   "abstrahlwinkel": 40,
+   "farbe_hex": "#151515",
+   "hinweis": "schwarze Aufbau-Zylinder GU10 in den Balkenfeldern; Reihe an der Haustürwand, 4. Spot vor HWR/Bad",
+   "quelle": "Foto Murat 04.11.2026; Anzahl/Lumen lt. Lichtplanung 25.05.2026 (4× 480 lm, 2700 K); Lage geschätzt"
   },
   {
    "id": "schiene-pfette",

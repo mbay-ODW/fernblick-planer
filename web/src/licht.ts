@@ -8,7 +8,7 @@ let flaechenlichtBereit = false;
 import { kelvinFarbe, leuchtMat, mat } from "./material";
 import { leuchtePfad } from "./haus";
 import { MOBIL } from "./geraet";
-import type { Masse, WandInfo } from "./haus";
+import type { Masse, WandInfo, P2 } from "./haus";
 
 const RAD = Math.PI / 180;
 
@@ -343,22 +343,41 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
         lichter.push(pl);
       }
     } else {
-      // Deckenspot / Deckenleuchte
-      const z = z0 + (le.z ?? 2.6);
+      // Deckenspot / Deckenleuchte; punkte [[x, y], …] = mehrere Spots an einem Kreis (lumen gesamt).
+      // bauform "aufbau": Aufbauzylinder (schwarz) an der Deckenschalung, sonst flacher Einbauspot.
+      const aufbau = le.bauform === "aufbau";
+      const z = z0 + (le.z ?? (aufbau && (le.geschoss ?? "EG") === "EG" ? M.ogZ - 0.13 : 2.6));
+      const orte: P2[] = Array.isArray(le.punkte) && le.punkte.length ? le.punkte : [[x, y]];
       const lm = leuchtMat("#fbf7ef", kelvin);
       mats.push(lm);
-      const k = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.03, 24), [mat("#f4f2ee", "glatt"), mat("#f4f2ee", "glatt"), lm]);
-      k.position.set(x, z + 0.015, y);
-      g.add(k);
-      const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 12, (62 * Math.PI) / 180, 0.65, 2);
-      sp.position.set(x, z - 0.02, y);
-      sp.target.position.set(x, z - 3, y);
-      sp.shadow.mapSize.set(MOBIL ? 512 : 1024, MOBIL ? 512 : 1024);
-      sp.shadow.bias = -0.0008;
-      sp.shadow.camera.near = 0.05;
-      sp.userData = { spot: true };
-      g.add(sp, sp.target);
-      lichter.push(sp);
+      const halb = ((le.abstrahlwinkel ?? (aufbau ? 40 : 124)) / 2) * (Math.PI / 180);
+      const koerper = aufbau ? mat(le.farbe_hex ?? "#151515", "metall", { name: "Aufbauspot" }) : mat("#f4f2ee", "glatt");
+      orte.forEach(([px, py], i) => {
+        const hoehe = aufbau ? (le.hoehe_koerper ?? 0.1) : 0.03, r = aufbau ? (le.durchmesser ?? 0.08) / 2 : 0.07;
+        const k = new THREE.Mesh(new THREE.CylinderGeometry(r, r, hoehe, 24), [koerper, koerper, aufbau ? koerper : lm]);
+        k.position.set(px, z - (aufbau ? hoehe / 2 : -0.015), py);
+        k.castShadow = aufbau;
+        g.add(k);
+        let unten = z - 0.02;
+        if (aufbau) {
+          const linse = new THREE.Mesh(new THREE.CircleGeometry(r * 0.62, 20), lm);
+          linse.rotation.x = Math.PI / 2;
+          unten = z - hoehe + 0.012;
+          linse.position.set(px, unten, py);
+          g.add(linse);
+          unten -= 0.01;
+        }
+        const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 12, halb, aufbau ? 0.45 : 0.65, 2);
+        sp.position.set(px, unten, py);
+        sp.target.position.set(px, unten - 3, py);
+        sp.shadow.mapSize.set(MOBIL ? 512 : 1024, MOBIL ? 512 : 1024);
+        sp.shadow.bias = -0.0008;
+        sp.shadow.camera.near = 0.05;
+        // nur der erste Spot einer Gruppe wirft Schatten (Leistung)
+        sp.userData = { spot: true, anteil: 1 / orte.length, keinSchatten: i > 0 };
+        g.add(sp, sp.target);
+        lichter.push(sp);
+      });
     }
     eintraege.push({ id: le.id, name: le.name ?? le.id, lichter, mats, lumen: le.lumen ?? 800, kelvin, daten: le });
   }

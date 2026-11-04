@@ -5,6 +5,27 @@ import { bauteilFinden, bauteilVerschieben, mitlaeuferKopie } from "./bauteile";
 import { ecken, istFlach } from "./moebel";
 import { wandPoly } from "./pruefung";
 
+function inPoly(x: number, y: number, poly: P2[]) {
+  let rein = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) rein = !rein;
+  }
+  return rein;
+}
+
+/** Seite (+1 = Wandnormale, −1 = Gegenseite), zu der eine Drehflügeltür aufschlägt. */
+export function tuerSeite(d: any, w: WandInfo, m: any, A: P2, B: P2): number {
+  const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, a = w.dicke / 2 + 0.3;
+  const raumAn = (s: number) => (m.raeume ?? []).find((r: any) => (r.geschoss ?? "EG") === (d.geschoss ?? "EG") && inPoly(mx + w.nx * s * a, my + w.ny * s * a, r.polygon ?? []));
+  const plus = raumAn(1), minus = raumAn(-1);
+  if (d.aufschlag) return plus?.id === d.aufschlag ? 1 : minus?.id === d.aufschlag ? -1 : 1;
+  const flur = (r: any) => !r || /diele|flur/.test(r.id);
+  if (flur(plus) && !flur(minus)) return -1;
+  if (flur(minus) && !flur(plus)) return 1;
+  return d.anschlag === "in den Raum" ? -1 : 1;
+}
+
 const NS = "http://www.w3.org/2000/svg";
 
 export interface PlanRueckrufe {
@@ -194,9 +215,9 @@ export class Plan {
           for (const s of [-0.03, 0.03]) el("line", { x1: A[0] + w.nx * s, y1: A[1] + w.ny * s, x2: B[0] + w.nx * s, y2: B[1] + w.ny * s, class: "fensterlinie" }, wg);
         }
         if (o.typ === "tuer") {
-          // Türschwenk zur Raumseite (Annahme)
+          // Türschwenk: in den Raum aus „aufschlag“ (Raum-ID), sonst in den Raum, der nicht Diele/Flur ist
           const r = o.u1 - o.u0;
-          const s = o.daten.anschlag === "in den Raum" ? -1 : 1;
+          const s = tuerSeite(o.daten, w, m, A, B);
           const nx = w.nx * s * (w.dicke / 2), ny = w.ny * s * (w.dicke / 2);
           const P: P2 = [A[0] + nx, A[1] + ny];
           const E: P2 = [P[0] + w.nx * s * r, P[1] + w.ny * s * r];
@@ -239,7 +260,7 @@ export class Plan {
     // Leuchten
     const lg = el("g", { class: "leuchten" }, svg);
     for (const le of m.leuchten ?? []) {
-      const pf = !le.pos ? leuchtePfad(le, this.M, this.waende) : null;
+      const pf = !le.pos && !le.punkte ? leuchtePfad(le, this.M, this.waende) : null;
       if (pf) {
         const zeigen = ge === "OG" ? pf.punkte.some((p) => p[2] > this.M.ogZ) : pf.punkte.some((p) => p[2] < this.M.ogZ + 0.5) || le.geschoss === "EG";
         if (!zeigen) continue;
@@ -254,10 +275,13 @@ export class Plan {
         }
         continue;
       }
-      if ((le.geschoss ?? "EG") !== ge || !le.pos) continue;
-      el("circle", { cx: le.pos[0], cy: le.pos[1], r: 0.09 }, lg);
-      el("line", { x1: le.pos[0] - 0.12, y1: le.pos[1], x2: le.pos[0] + 0.12, y2: le.pos[1] }, lg);
-      el("line", { x1: le.pos[0], y1: le.pos[1] - 0.12, x2: le.pos[0], y2: le.pos[1] + 0.12 }, lg);
+      if ((le.geschoss ?? "EG") !== ge) continue;
+      const orte: P2[] = Array.isArray(le.punkte) && le.punkte.length ? le.punkte : le.pos ? [le.pos] : [];
+      for (const [px, py] of orte) {
+        el("circle", { cx: px, cy: py, r: le.bauform === "aufbau" ? 0.06 : 0.09, class: le.bauform === "aufbau" ? "aufbau" : "" }, lg);
+        el("line", { x1: px - 0.12, y1: py, x2: px + 0.12, y2: py }, lg);
+        el("line", { x1: px, y1: py - 0.12, x2: px, y2: py + 0.12 }, lg);
+      }
     }
 
     // Maße für Auswahl
