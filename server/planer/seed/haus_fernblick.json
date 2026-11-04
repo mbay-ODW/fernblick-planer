@@ -2259,12 +2259,14 @@
    }
   ],
   "fensterbank": {
-   "material": "Holz",
-   "farbe": "Eiche",
-   "farbe_hex": "#b98c55",
-   "dicke": 0.03,
-   "ueberstand": 0.03,
-   "quelle": "Murat 04.11.2026"
+   "material": "Eiche massiv rustikal",
+   "farbe": "Eiche natur geölt",
+   "farbe_hex": "#b37c47",
+   "dicke": 0.045,
+   "ueberstand": 0.05,
+   "seitlich": 0.06,
+   "hinweis": "massive Eiche mit Ästen, leicht unregelmäßige Vorderkante; seitlich ca. 6 cm in den Putz eingelassen",
+   "quelle": "Foto Murat 04.11.2026"
   }
  }
 }

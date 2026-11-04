@@ -506,7 +506,8 @@ function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number, m: any
         if (o.daten.fensterbank !== false) {
           const tiefe = w.dicke / 2 + fb.ueberstand;
           const fbMat = mat(fb.farbe_hex, /holz|eiche/i.test(fb.material) ? "holz" : /stein|beton|marmor/i.test(fb.material) ? "beton" : "glatt", { name: `Fensterbank ${fb.material}` });
-          mk(b + 0.06, fb.dicke, tiefe, fbMat, uc, o.z0 - fb.dicke / 2, (innen * tiefe) / 2);
+          // seitlich über die Laibung hinaus (in den Putz eingelassen), vorne Überstand vor die Wand
+          mk(b + 2 * (fb.seitlich ?? 0.03), fb.dicke, tiefe, fbMat, uc, o.z0 - fb.dicke / 2, (innen * tiefe) / 2);
         }
       }
     } else if (o.typ === "haustuer") {
