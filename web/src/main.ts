@@ -359,7 +359,7 @@ class App {
       farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
-    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
     if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
@@ -394,9 +394,9 @@ class App {
     if (!x) return;
     this.aendern((m) => {
       const y = m.moebel.find((z: any) => z.id === x.id);
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff"]) delete y[k];
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten"]) delete y[k];
       Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
     }, "moebel", `${x.name} → ${v.name}`);
     this.tauschModus = false;
   }
@@ -1063,8 +1063,11 @@ class App {
         ...(x.typ === "haengeschrank" ? [
           h("label", {}, "Front"), h("div", { class: "chips" }, ...(["glatt", "riffel"] as const).map((v) => h("button", { class: (x.front ?? "glatt") === v ? "an" : "",
             onclick: () => setze("front", v, `${x.name}: Front ${v}`) }, v === "riffel" ? "geriffelt" : "glatt"))),
-          h("label", {}, "Knauf (von vorn)"), h("div", { class: "chips" }, ...(["links", "rechts"] as const).map((v) => h("button", { class: (x.griff ?? "links") === v ? "an" : "",
-            onclick: () => setze("griff", v, `${x.name}: Knauf ${v}`) }, v)))] : []),
+          h("label", {}, "Knauf (von vorn)"), h("div", { class: "chips" }, ...(["links", "rechts", "ohne"] as const).map((v) => h("button", { class: (x.griff ?? "links") === v ? "an" : "",
+            onclick: () => setze("griff", v, `${x.name}: Knauf ${v}`) }, v))),
+          h("label", {}, "Türen / offen unten (m)"), h("div", { class: "zwei" },
+            num(x.tueren ?? 1, (v) => setze("tueren", Math.max(1, Math.min(2, Math.round(v))), `${x.name}: Türen`), 1),
+            num(x.offen_unten ?? 0, (v) => setze("offen_unten", Math.max(0, v) || undefined, `${x.name}: offenes Fach`), 0.01))] : []),
         ...(String(x.typ).startsWith("tv_board") ? [h("label", {}, "TV Zoll (0 = keiner)"), num(tvZoll(x), (v) => setze("tv_zoll", Math.max(0, Math.round(v)), `${x.name}: TV ${Math.round(v)}"`), 1)] : []),
         ...(x.licht ? [
           h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },

@@ -122,6 +122,8 @@ def haushalt() -> list[dict[str, Any]]:
            "#c8bcae", "Stauraum", "MDF matt, Knauf Messing", z=1.2, front="riffel", griff="links"),
         _v("haengeschrank-glatt", "haengeschrank", "Hängeschrank glatt 40×30×70", 0.40, 0.30, 0.70, "weiß",
            "Stauraum", "MDF matt", z=1.2),
+        _v("haengeschrank-bad-2t-offen", "haengeschrank", "Bad-Hängeschrank 2 Türen + offene Fächer 56×25×75", 0.56, 0.25,
+           0.75, "#d9d1c6", "Stauraum", "MDF matt, grifflos", z=1.2, tueren=2, offen_unten=0.21, griff="ohne"),
     ]
 
 

@@ -125,21 +125,40 @@ export function moebelBauen(m: any): MoebelObjekt {
       break;
     }
     case "haengeschrank": {
-      // Hängeschrank mit einer Tür; front "riffel" = senkrecht geriffelte Front, Knauf rund (griff links/rechts)
-      const ft = 0.016;
-      b(w, h, d - ft, haupt, 0, h / 2, -ft / 2);
+      // Hängeschrank: tueren (1/2), front "riffel"/"glatt", griff links/rechts/ohne,
+      // offen_unten = Höhe offener Fächer unten (Mittelwand bei 2 Türen)
+      const ft = 0.016, t = 0.016, ho = Math.max(0, Math.min(h - 0.1, Number(m.offen_unten) || 0));
+      const nT = Math.max(1, Math.round(Number(m.tueren) || 1));
+      if (ho > 0) {
+        const tief = d - ft;
+        b(t, h, tief, haupt, -w / 2 + t / 2, h / 2, -ft / 2);
+        b(t, h, tief, haupt, w / 2 - t / 2, h / 2, -ft / 2);
+        b(w, h, t, haupt, 0, h / 2, -d / 2 + t / 2);
+        b(w - 2 * t, t, d, haupt, 0, t / 2, 0);
+        b(w - 2 * t, t, d, haupt, 0, ho, 0);
+        b(w - 2 * t, h - ho, tief, haupt, 0, ho + (h - ho) / 2, -ft / 2);
+        if (nT >= 2) b(t, ho - t, d - t, haupt, 0, t + (ho - t) / 2, t / 2);
+      } else {
+        b(w, h, d - ft, haupt, 0, h / 2, -ft / 2);
+      }
+      const hT = h - ho - (ho > 0 ? t / 2 : 0), yT = h - hT / 2;
       if ((m.front ?? "glatt") === "riffel") {
         const n = Math.max(4, Math.round(w / 0.03));
         const r = w / n / 2;
-        b(w, h - 0.002, 0.004, haupt, 0, h / 2, d / 2 - ft + 0.002);
-        for (let i = 0; i < n; i++) rund(g, r, h - 0.002, haupt, -w / 2 + r + i * 2 * r, h / 2, d / 2 - ft + r * 0.9, 12);
+        b(w, hT - 0.002, 0.004, haupt, 0, yT, d / 2 - ft + 0.002);
+        for (let i = 0; i < n; i++) rund(g, r, hT - 0.002, haupt, -w / 2 + r + i * 2 * r, yT, d / 2 - ft + r * 0.9, 12);
       } else {
-        b(w - 0.003, h - 0.003, ft, haupt, 0, h / 2, d / 2 - ft / 2);
+        const fuge = 0.003, bw = (w - (nT - 1) * fuge) / nT;
+        for (let i = 0; i < nT; i++) b(bw - 0.002, hT - 0.003, ft, haupt, -w / 2 + bw / 2 + i * (bw + fuge), yT, d / 2 - ft / 2);
       }
-      const gx = (m.griff === "rechts" ? 1 : -1) * (w / 2 - Math.min(0.05, w * 0.15));
-      const messing = mat(m.griff_farbe ?? "#d4b06a", "glatt", { name: "Knauf Messing" });
-      const k = rund(g, 0.014, 0.022, messing, gx, h / 2, d / 2 + 0.011, 20);
-      k.rotation.x = Math.PI / 2;
+      if ((m.griff ?? "links") !== "ohne") {
+        const messing = mat(m.griff_farbe ?? "#d4b06a", "glatt", { name: "Knauf Messing" });
+        const xs = nT >= 2 ? [-0.03, 0.03] : [(m.griff === "rechts" ? 1 : -1) * (w / 2 - Math.min(0.05, w * 0.15))];
+        for (const gx of xs) {
+          const k = rund(g, 0.014, 0.022, messing, gx, yT, d / 2 + 0.011, 20);
+          k.rotation.x = Math.PI / 2;
+        }
+      }
       break;
     }
     case "apothekerschrank": {
