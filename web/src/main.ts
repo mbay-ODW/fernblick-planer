@@ -1,0 +1,853 @@
+// Fernblick-Planer – Oberfläche: Plan 2D / 3D / Rendering
+import "./stil.css";
+import { api, KonfliktFehler } from "./api";
+import { h, leeren, toast, zahl, zeitText, frage } from "./dom";
+import { Szene, Geschossfilter } from "./szene";
+import { Plan } from "./plan2d";
+import { pruefen, Hinweis } from "./pruefung";
+import { seitenName, P2 } from "./haus";
+import { sonnenstand } from "./licht";
+import { RenderAnsicht } from "./rendern";
+
+type Modus = "2d" | "3d" | "render";
+type Art = "moebel" | "haus" | "licht" | "einstellungen";
+
+const PALETTE: [string, string][] = [
+  ["Weiß", "#f1efea"], ["Altweiß", "#ece6da"], ["Kalk", "#e8e2d4"], ["Greige", "#cdbfa8"], ["Sand", "#d9c9a8"],
+  ["Salbei", "#9eae86"], ["Olivgrün", "#5f6b3c"], ["Terrakotta", "#b8694a"], ["Taubenblau", "#7d8fa0"],
+  ["Anthrazit", "#3e4043"], ["Sichtholz Fichte", "#d9b98a"], ["Eiche", "#b98c55"],
+];
+const MATERIALIEN = ["Rollputz", "Glattputz", "Kalkputz", "Sichtholz", "Aluverbundplatte", "Fliese", "Beton", "Tapete"];
+const BODEN_MAT = ["Parkett", "Dielen", "Fliese", "Beton", "Teppich"];
+const TYPEN = ["sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
+  "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
+  "kleiderstange", "kommode", "sideboard", "regal_niedrig", "tv_board_haengend", "wandregal", "garderobe_lamellen", "spiegel",
+  "spiegel_rund", "bild", "teppich", "pflanze", "stehleuchte", "tischleuchte"];
+
+class App {
+  modell: any = null;
+  basis: number | null = null;
+  stand = ""; // JSON des zuletzt übernommenen Stands (für Rückgängig)
+  rueckListe: string[] = [];
+  vorListe: string[] = [];
+  modus: Modus = "3d";
+  planGeschoss: "EG" | "OG" = "EG";
+  auswahl: string | null = null;
+  hinweise: Hinweis[] = [];
+  tab = "moebel";
+  ich = "";
+  speichernTimer = 0;
+  speichertGerade = false;
+  ungespeichert = false;
+  notizen: string[] = [];
+  szene!: Szene;
+  plan!: Plan;
+  render!: RenderAnsicht;
+  pinsel = { aktiv: false, farbe: "#9eae86", name: "Salbei", material: "Rollputz" };
+  katalogFilter = { suche: "", kategorie: "" };
+  tauschModus = false;
+  zeitAnimation = 0;
+
+  async start() {
+    const ich = await api.ich().catch(() => ({ benutzer: "?" }));
+    this.ich = ich.benutzer ?? ich.wer ?? "";
+    document.getElementById("benutzer")!.textContent = this.ich;
+    this.szene = new Szene(document.getElementById("ansicht3d")!, {
+      auswahl: (id) => this.waehlen(id),
+      verschoben: (id, pos) => this.aendern((m) => this.lage(m, id, pos), "moebel", "Möbel verschoben"),
+      wandKlick: (w, s) => this.wandMalen(w, s),
+      bodenKlick: (r) => this.bodenMalen(r),
+      kamera: () => this.render?.kameraGeaendert(),
+    });
+    this.plan = new Plan(document.getElementById("ansicht2d")!, {
+      auswahl: (id) => this.waehlen(id),
+      live: (id, pos, rot) => {
+        const x = this.modell.moebel.find((y: any) => y.id === id);
+        if (x) this.szene.moebelLage({ ...x, pos, rot_grad: rot });
+      },
+      fertig: (id, pos, rot) => this.aendern((m) => this.lage(m, id, pos, rot), "moebel", "Möbel im Plan verschoben"),
+      wandKlick: (w, s) => this.wandMalen(w, s),
+      bodenKlick: (r) => this.bodenMalen(r),
+    });
+    this.render = new RenderAnsicht(document.getElementById("ansichtRender")!, this);
+    this.modell = await api.modell();
+    this.basis = this.modell.meta.version;
+    this.stand = JSON.stringify(this.modell);
+    this.szene.laden(this.modell);
+    this.szene.begehen(this.modell.ansichten?.[0]?.kamera);
+    this.szene.umschauen();
+    this.kopfLeiste();
+    this.modusSetzen("3d");
+    this.allesNeu();
+    this.tasten();
+    window.setInterval(() => this.abgleich(), 4000);
+    window.addEventListener("beforeunload", (e) => {
+      if (this.ungespeichert) e.preventDefault();
+    });
+    this.status();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Änderungen, Rückgängig, Speichern, Abgleich mit MCP-Änderungen
+  // ---------------------------------------------------------------------------
+  aendern(fn: (m: any) => void, art: Art, notiz: string, rueckgaengig = true) {
+    if (rueckgaengig) {
+      this.rueckListe.push(this.stand);
+      if (this.rueckListe.length > 120) this.rueckListe.shift();
+      this.vorListe = [];
+    }
+    fn(this.modell);
+    this.stand = JSON.stringify(this.modell);
+    this.notizen.push(notiz);
+    this.neuZeichnen(art);
+    this.speichernPlanen();
+  }
+
+  neuZeichnen(art: Art) {
+    if (art === "haus") this.szene.laden(this.modell);
+    else if (art === "moebel") this.szene.moebelNeu(this.modell);
+    else if (art === "licht") this.szene.leuchtenNeu(this.modell);
+    if (art !== "haus") this.szene.einstellungen(this.modell.einstellungen ?? {});
+    this.hinweise = pruefen(this.modell);
+    this.planNeu();
+    this.seiteNeu();
+    this.eigenschaftenNeu();
+  }
+
+  allesNeu() {
+    this.hinweise = pruefen(this.modell);
+    this.planNeu();
+    this.seiteNeu();
+    this.eigenschaftenNeu();
+  }
+
+  planNeu() {
+    if (this.modus === "2d") this.plan.setzen(this.modell, this.planGeschoss, this.auswahl, new Set(this.hinweise.flatMap((x) => x.ids)));
+  }
+
+  rueckgaengig() {
+    const s = this.rueckListe.pop();
+    if (!s) return toast("Nichts mehr rückgängig zu machen");
+    this.vorListe.push(this.stand);
+    this.zustandSetzen(s, "Rückgängig");
+  }
+
+  wiederholen() {
+    const s = this.vorListe.pop();
+    if (!s) return;
+    this.rueckListe.push(this.stand);
+    this.zustandSetzen(s, "Wiederholt");
+  }
+
+  private zustandSetzen(json: string, notiz: string) {
+    const v = this.modell.meta.version;
+    this.modell = JSON.parse(json);
+    this.modell.meta.version = v;
+    this.stand = JSON.stringify(this.modell);
+    if (this.auswahl && !this.modell.moebel.some((x: any) => x.id === this.auswahl)) this.auswahl = null;
+    this.szene.laden(this.modell);
+    this.szene.markieren(this.auswahl);
+    this.notizen.push(notiz);
+    this.allesNeu();
+    this.speichernPlanen();
+  }
+
+  speichernPlanen() {
+    this.ungespeichert = true;
+    this.status();
+    window.clearTimeout(this.speichernTimer);
+    this.speichernTimer = window.setTimeout(() => this.speichern(), 1100);
+  }
+
+  async speichern(erzwingen = false) {
+    if (this.speichertGerade) {
+      this.speichernPlanen();
+      return;
+    }
+    this.speichertGerade = true;
+    const notiz = [...new Set(this.notizen)].slice(-4).join(", ").slice(0, 190) || "Planer";
+    const json = this.stand;
+    try {
+      const r = await api.speichern(JSON.parse(json), erzwingen ? null : this.basis, notiz);
+      this.basis = r.version;
+      this.modell.meta.version = r.version;
+      this.notizen = [];
+      if (this.stand === json) this.ungespeichert = false;
+      document.getElementById("banner")!.hidden = true;
+    } catch (e) {
+      if (e instanceof KonfliktFehler) this.konflikt(e.aktuell);
+      else toast(`Speichern fehlgeschlagen: ${(e as Error).message}`, "fehler");
+    } finally {
+      this.speichertGerade = false;
+      this.status();
+    }
+  }
+
+  private konflikt(aktuell: number) {
+    const b = document.getElementById("banner")!;
+    leeren(b);
+    b.append(
+      h("span", {}, `Das Modell wurde inzwischen geändert (Version ${aktuell}, z. B. über den MCP). Deine letzten Änderungen sind noch nicht gespeichert.`),
+      h("button", { onclick: () => this.neuLaden(true) }, "Neu laden (meine Änderungen verwerfen)"),
+      h("button", { class: "warn", onclick: () => this.speichern(true) }, "Meinen Stand trotzdem speichern"),
+    );
+    b.hidden = false;
+  }
+
+  async neuLaden(hinweis = false) {
+    const kam = this.szene.kameraDaten();
+    const m = await api.modell();
+    this.modell = m;
+    this.basis = m.meta.version;
+    this.stand = JSON.stringify(m);
+    this.ungespeichert = false;
+    this.notizen = [];
+    window.clearTimeout(this.speichernTimer);
+    if (this.auswahl && !m.moebel.some((x: any) => x.id === this.auswahl)) this.auswahl = null;
+    this.szene.laden(m);
+    this.szene.markieren(this.auswahl);
+    if (!kam.begehen) this.szene.ansicht(kam, false);
+    document.getElementById("banner")!.hidden = true;
+    this.allesNeu();
+    this.status();
+    if (hinweis) toast(`Stand ${m.meta.version} geladen (${m.meta.geaendert_von ?? ""}${m.meta.notiz ? ": " + m.meta.notiz : ""})`, "info");
+  }
+
+  private async abgleich() {
+    if (document.hidden) return;
+    try {
+      const v = await api.version();
+      if (this.basis !== null && v.version > this.basis && !this.speichertGerade) {
+        if (!this.ungespeichert) await this.neuLaden(true);
+        else this.konflikt(v.version);
+      }
+    } catch {
+      /* offline – nächster Versuch */
+    }
+  }
+
+  status() {
+    const s = document.getElementById("status")!;
+    s.textContent = this.speichertGerade ? "speichert …" : this.ungespeichert ? "ungespeichert" : `gespeichert · v${this.basis}`;
+    s.className = this.ungespeichert ? "offen" : "";
+  }
+
+  // ---------------------------------------------------------------------------
+  // Möbel-Operationen
+  // ---------------------------------------------------------------------------
+  raumAn(m: any, pos: P2, geschoss: string): string | undefined {
+    const innen = (poly: P2[]) => {
+      let c = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if (yi > pos[1] !== yj > pos[1] && pos[0] < ((xj - xi) * (pos[1] - yi)) / (yj - yi) + xi) c = !c;
+      }
+      return c;
+    };
+    return m.raeume.find((r: any) => r.geschoss === geschoss && innen(r.polygon))?.id;
+  }
+
+  lage(m: any, id: string, pos: P2, rot?: number) {
+    const x = m.moebel.find((y: any) => y.id === id);
+    if (!x) return;
+    x.pos = pos;
+    if (rot !== undefined) x.rot_grad = rot;
+    x.raum = this.raumAn(m, pos, x.geschoss) ?? x.raum;
+  }
+
+  waehlen(id: string | null) {
+    this.auswahl = id;
+    this.szene.markieren(id);
+    if (id) {
+      const x = this.modell.moebel.find((y: any) => y.id === id);
+      if (x && this.modus === "2d" && x.geschoss !== this.planGeschoss) this.planGeschoss = x.geschoss;
+    }
+    this.planNeu();
+    this.eigenschaftenNeu();
+    if (this.tab === "moebel") this.seiteNeu();
+    this.kopfLeiste();
+  }
+
+  gewaehlt(): any {
+    return this.auswahl ? this.modell.moebel.find((y: any) => y.id === this.auswahl) : null;
+  }
+
+  drehen(grad: number) {
+    const x = this.gewaehlt();
+    if (!x) return;
+    this.aendern((m) => {
+      const y = m.moebel.find((z: any) => z.id === x.id);
+      y.rot_grad = (((y.rot_grad ?? 0) + grad) % 360 + 360) % 360;
+    }, "moebel", "Möbel gedreht");
+  }
+
+  schieben(dx: number, dy: number) {
+    const x = this.gewaehlt();
+    if (!x) return;
+    this.aendern((m) => this.lage(m, x.id, [Math.round((x.pos[0] + dx) * 1000) / 1000, Math.round((x.pos[1] + dy) * 1000) / 1000]), "moebel", "Möbel verschoben");
+  }
+
+  loeschen() {
+    const x = this.gewaehlt();
+    if (!x) return;
+    this.aendern((m) => (m.moebel = m.moebel.filter((y: any) => y.id !== x.id)), "moebel", `${x.name ?? x.id} entfernt`);
+    this.waehlen(null);
+    toast(`${x.name ?? x.id} entfernt – Strg+Z holt es zurück`);
+  }
+
+  duplizieren() {
+    const x = this.gewaehlt();
+    if (!x) return;
+    const neu = { ...structuredClone(x), id: `m-${Math.random().toString(16).slice(2, 8)}`, pos: [x.pos[0] + 0.3, x.pos[1] + 0.3] };
+    this.aendern((m) => m.moebel.push(neu), "moebel", `${x.name ?? x.id} dupliziert`);
+    this.waehlen(neu.id);
+  }
+
+  einfuegePunkt(): { pos: P2; geschoss: string } {
+    if (this.modus === "2d") {
+      const vb = this.plan.svg.viewBox.baseVal;
+      return { pos: [Math.round((vb.x + vb.width / 2) * 20) / 20, Math.round((vb.y + vb.height / 2) * 20) / 20], geschoss: this.planGeschoss };
+    }
+    const k = this.szene.kameraDaten();
+    if (k.begehen) {
+      const dx = k.ziel[0] - k.pos[0], dz = k.ziel[2] - k.pos[2];
+      const l = Math.hypot(dx, dz) || 1;
+      const f = this.szene.fuss;
+      return { pos: [Math.round((f.x + (dx / l) * 1.5) * 20) / 20, Math.round((f.y + (dz / l) * 1.5) * 20) / 20], geschoss: f.z > 1.5 ? "OG" : "EG" };
+    }
+    const t = this.szene.orbit.target;
+    return { pos: [Math.round(t.x * 20) / 20, Math.round(t.z * 20) / 20], geschoss: this.szene.geschoss === "OG" ? "OG" : t.y > 2.6 ? "OG" : "EG" };
+  }
+
+  ausVorlage(v: any) {
+    const { pos, geschoss } = this.einfuegePunkt();
+    const neu: any = {
+      id: `m-${Math.random().toString(16).slice(2, 8)}`, vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth],
+      farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
+      verschiebbar: true, quelle: `Planer (${this.ich})`,
+    };
+    for (const k of ["z", "licht", "preis_eur", "link"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
+    this.waehlen(neu.id);
+  }
+
+  tauschen(v: any) {
+    const x = this.gewaehlt();
+    if (!x) return;
+    this.aendern((m) => {
+      const y = m.moebel.find((z: any) => z.id === x.id);
+      for (const k of ["z", "licht", "preis_eur", "link"]) delete y[k];
+      Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
+      for (const k of ["z", "licht", "preis_eur", "link"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+    }, "moebel", `${x.name} → ${v.name}`);
+    this.tauschModus = false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Oberflächen
+  // ---------------------------------------------------------------------------
+  wandMalen(wandId: string, seite: "plus" | "minus") {
+    if (!this.pinsel.aktiv) return;
+    const w = this.szene.haus.waende.find((x) => x.id === wandId);
+    if (!w) return;
+    const sname = seitenName(w, seite);
+    const id = `wand-${wandId}-${sname}`.toLowerCase().replace(/[^a-z0-9äöüß-]+/g, "-");
+    this.aendern((m) => {
+      const fl = (m.oberflaechen.flaechen ??= []);
+      const alt = fl.findIndex((f: any) => f.wand === wandId && (f.seite ?? "").toLowerCase().startsWith(sname.toLowerCase()) && !f.x && !f.y && !f.z);
+      const neu = { id: alt >= 0 ? fl[alt].id : id, geschoss: w.geschoss, wand: wandId, seite: sname, material: this.pinsel.material, farbe: this.pinsel.name, farbe_hex: this.pinsel.farbe, quelle: `Planer (${this.ich})` };
+      if (alt >= 0) fl[alt] = { ...fl[alt], ...neu };
+      else fl.push(neu);
+    }, "haus", `Wand ${wandId} (${sname}) ${this.pinsel.name}`);
+    toast(`${wandId}, Seite ${sname}: ${this.pinsel.name} / ${this.pinsel.material}`);
+  }
+
+  bodenMalen(raum: string) {
+    if (!this.pinsel.aktiv) return;
+    const mat = BODEN_MAT.includes(this.pinsel.material) ? this.pinsel.material : "Parkett";
+    this.aendern((m) => {
+      const fl = (m.oberflaechen.flaechen ??= []);
+      const i = fl.findIndex((f: any) => f.art === "boden" && f.raum === raum);
+      const neu = { id: `boden-${raum}`, art: "boden", raum, material: mat, farbe: this.pinsel.name, farbe_hex: this.pinsel.farbe, quelle: `Planer (${this.ich})` };
+      if (i >= 0) fl[i] = neu;
+      else fl.push(neu);
+    }, "haus", `Boden ${raum} ${this.pinsel.name}`);
+    toast(`Boden ${raum}: ${this.pinsel.name} / ${mat}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Kopfleiste und Modi
+  // ---------------------------------------------------------------------------
+  kopfLeiste() {
+    for (const b of document.querySelectorAll<HTMLButtonElement>("#modi button")) b.classList.toggle("an", b.dataset.modus === this.modus);
+    const g = this.modus === "2d" ? this.planGeschoss : this.szene.geschoss;
+    for (const b of document.querySelectorAll<HTMLButtonElement>("#geschosse button")) {
+      b.classList.toggle("an", b.dataset.g === g);
+      b.hidden = this.modus === "2d" && b.dataset.g === "alle";
+    }
+    document.getElementById("geschosse")!.hidden = this.modus === "render" || (this.modus === "3d" && this.szene.modus === "begehen");
+    document.getElementById("kameramodus")!.hidden = this.modus === "2d";
+    for (const b of document.querySelectorAll<HTMLButtonElement>("#kameramodus button")) b.classList.toggle("an", b.dataset.k === this.szene.modus);
+    document.getElementById("dachSchalter")!.hidden = this.modus === "2d" || this.szene.modus === "begehen";
+    this.hilfe();
+  }
+
+  modusSetzen(m: Modus) {
+    this.modus = m;
+    const b = document.getElementById("buehne")!;
+    b.dataset.modus = m;
+    this.szene.aktiv = m !== "2d";
+    if (m === "2d") this.plan.setzen(this.modell, this.planGeschoss, this.auswahl, new Set(this.hinweise.flatMap((x) => x.ids)));
+    if (m === "render") this.render.zeigen();
+    else this.render.verstecken();
+    this.kopfLeiste();
+  }
+
+  hilfe() {
+    const t = document.getElementById("hilfe")!;
+    if (this.pinsel.aktiv) t.textContent = "Pinsel aktiv: Wandseite oder Boden anklicken · Esc beendet";
+    else if (this.modus === "2d") t.textContent = "Ziehen = verschieben (Alt = 1 cm) · Griff = drehen (Umschalt = frei) · R/Q/E drehen · Entf löschen · Strg+D duplizieren · Mausrad zoomt";
+    else if (this.szene.modus === "begehen") t.textContent = "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Doppelklick = Maus fangen (Esc lösen) · Klick auf Boden = hingehen · Klick auf Möbel = auswählen";
+    else t.textContent = "Ziehen = drehen · Rechts/zwei Finger = verschieben · Rad = zoomen · Möbel anklicken und ziehen · R/Q/E drehen";
+  }
+
+  private tasten() {
+    window.addEventListener("keydown", (e) => {
+      if ((e.target as HTMLElement)?.closest?.("input,textarea,select")) return;
+      const strg = e.ctrlKey || e.metaKey;
+      if (strg && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? this.wiederholen() : this.rueckgaengig(); return; }
+      if (strg && e.key.toLowerCase() === "y") { e.preventDefault(); this.wiederholen(); return; }
+      if (strg && e.key.toLowerCase() === "d") { e.preventDefault(); this.duplizieren(); return; }
+      if (strg && e.key.toLowerCase() === "s") { e.preventDefault(); this.speichern(); return; }
+      if (e.key === "Escape") {
+        if (this.pinsel.aktiv) this.pinselSetzen(false);
+        else this.waehlen(null);
+        return;
+      }
+      const beg = this.modus === "3d" && this.szene.modus === "begehen";
+      if (!this.auswahl) return;
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); this.loeschen(); }
+      else if (e.key === "r" || e.key === "R") this.drehen(e.shiftKey ? -90 : 90);
+      else if (e.key === "q") this.drehen(-15);
+      else if (e.key === "e") this.drehen(15);
+      else if (!beg && e.key.startsWith("Arrow")) {
+        e.preventDefault();
+        const s = e.shiftKey ? 0.25 : e.altKey ? 0.01 : 0.05;
+        const d: Record<string, P2> = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] };
+        this.schieben(...d[e.key]);
+      }
+    });
+    document.getElementById("modi")!.addEventListener("click", (e) => {
+      const m = (e.target as HTMLElement).closest("button")?.dataset.modus as Modus | undefined;
+      if (m) this.modusSetzen(m);
+    });
+    document.getElementById("geschosse")!.addEventListener("click", (e) => {
+      const g = (e.target as HTMLElement).closest("button")?.dataset.g;
+      if (!g) return;
+      if (this.modus === "2d") {
+        this.planGeschoss = g as "EG" | "OG";
+        this.planNeu();
+      } else {
+        this.szene.geschoss = g as Geschossfilter;
+        this.szene.sichtbarkeit();
+      }
+      this.kopfLeiste();
+    });
+    document.getElementById("kameramodus")!.addEventListener("click", (e) => {
+      const k = (e.target as HTMLElement).closest("button")?.dataset.k;
+      if (k === "begehen") this.szene.begehen();
+      else if (k === "orbit") this.szene.umschauen();
+      this.kopfLeiste();
+    });
+    (document.getElementById("dach") as HTMLInputElement).addEventListener("change", (e) => {
+      this.szene.dachZeigen = (e.target as HTMLInputElement).checked;
+      this.szene.sichtbarkeit();
+    });
+    document.getElementById("rueck")!.onclick = () => this.rueckgaengig();
+    document.getElementById("vor")!.onclick = () => this.wiederholen();
+    document.getElementById("foto")!.onclick = () => this.screenshot();
+    document.getElementById("seiteSchalter")!.onclick = () => document.getElementById("app")!.classList.toggle("ohneSeite");
+    document.getElementById("tabs")!.addEventListener("click", (e) => {
+      const t = (e.target as HTMLElement).closest("button")?.dataset.tab;
+      if (t) {
+        this.tab = t;
+        this.seiteNeu();
+      }
+    });
+  }
+
+  async screenshot(titel?: string) {
+    try {
+      let blob: Blob, kamera: any = {};
+      if (this.modus === "2d") blob = await this.plan.alsPng();
+      else {
+        blob = await this.szene.bildschirmfoto();
+        kamera = this.szene.kameraDaten();
+      }
+      const name = titel ?? (this.modus === "2d" ? `Plan ${this.planGeschoss}` : `3D ${this.einstellungsText()}`);
+      await api.bildHochladen(blob, name, "screenshot", this.modus, { ...kamera, einstellungen: this.modell.einstellungen });
+      toast("Screenshot gespeichert (Rendering → Bilder)", "ok");
+      this.render.listenNeu();
+    } catch (e) {
+      toast(`Screenshot fehlgeschlagen: ${(e as Error).message}`, "fehler");
+    }
+  }
+
+  einstellungsText(): string {
+    const e = this.modell.einstellungen ?? {};
+    const sz = (this.modell.szenarien ?? []).find((s: any) => s.id === e.szenario);
+    return `${e.datum ?? ""} ${e.uhrzeit ?? ""}${sz ? " · " + sz.name : ""}`;
+  }
+
+  pinselSetzen(an: boolean) {
+    this.pinsel.aktiv = an;
+    this.szene.pinsel = an;
+    this.plan.pinsel = an;
+    document.getElementById("buehne")!.classList.toggle("pinsel", an);
+    this.hilfe();
+    if (this.tab === "farben") this.seiteNeu();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seitenleiste
+  // ---------------------------------------------------------------------------
+  seiteNeu() {
+    for (const b of document.querySelectorAll<HTMLButtonElement>("#tabs button")) b.classList.toggle("an", b.dataset.tab === this.tab);
+    const c = document.getElementById("tabinhalt")!;
+    const scroll = c.scrollTop;
+    leeren(c);
+    const f: Record<string, () => void> = {
+      moebel: () => this.tabMoebel(c), katalog: () => this.tabKatalog(c), farben: () => this.tabFarben(c), licht: () => this.tabLicht(c),
+      ansichten: () => this.tabAnsichten(c), staende: () => this.tabStaende(c),
+    };
+    f[this.tab]?.();
+    c.scrollTop = scroll;
+  }
+
+  private tabMoebel(c: HTMLElement) {
+    const raeume = new Map<string, any>(this.modell.raeume.map((r: any) => [r.id, r]));
+    const gruppen = new Map<string, any[]>();
+    for (const x of this.modell.moebel) {
+      const k = x.raum || "ohne Raum";
+      if (!gruppen.has(k)) gruppen.set(k, []);
+      gruppen.get(k)!.push(x);
+    }
+    c.append(h("div", { class: "zeile" },
+      h("button", { class: "haupt", onclick: () => { this.tab = "katalog"; this.tauschModus = false; this.seiteNeu(); } }, "+ Möbel aus Katalog"),
+      h("span", { class: "dezent" }, `${this.modell.moebel.length} Stück`)));
+    if (this.hinweise.length) {
+      const hw = h("div", { class: "hinweise" }, h("h4", {}, `⚠ ${this.hinweise.length} Hinweis${this.hinweise.length > 1 ? "e" : ""}`));
+      for (const x of this.hinweise.slice(0, 30)) hw.append(h("div", { class: "hinweis", onclick: () => this.waehlen(x.ids[0]) }, x.text));
+      c.append(hw);
+    }
+    const reihenfolge = ["wohnen", "diele", "schlafen", "bad", "hwr", "galerie", "kinder"];
+    const schluessel = [...gruppen.keys()].sort((a, b) => (reihenfolge.indexOf(a) + 99) % 99 - (reihenfolge.indexOf(b) + 99) % 99);
+    for (const k of schluessel) {
+      const r = raeume.get(k);
+      c.append(h("h4", {}, `${r?.name ?? k}${r ? ` · ${r.geschoss}` : ""}`));
+      for (const x of gruppen.get(k)!) {
+        const warn = this.hinweise.some((hw) => hw.ids.includes(x.id));
+        c.append(h("div", { class: "eintrag" + (x.id === this.auswahl ? " an" : "") + (warn ? " warnung" : ""), onclick: () => { this.waehlen(x.id); this.szene.fokus(x.id); } },
+          h("span", { class: "punkt", style: { background: x.farbe_hex } }),
+          h("span", { class: "name" }, x.name ?? x.typ),
+          h("span", { class: "dezent" }, x.masse_bth.map((v: number) => Math.round(v * 100)).join("×"))));
+      }
+    }
+  }
+
+  private tabKatalog(c: HTMLElement) {
+    const sel = this.gewaehlt();
+    const bib = this.modell.bibliothek ?? [];
+    const kats = [...new Set(bib.map((v: any) => v.kategorie ?? "Sonstiges"))] as string[];
+    if (sel) {
+      c.append(h("div", { class: "zeile umschalter klein" },
+        h("button", { class: !this.tauschModus ? "an" : "", onclick: () => { this.tauschModus = false; this.seiteNeu(); } }, "Hinzufügen"),
+        h("button", { class: this.tauschModus ? "an" : "", onclick: () => { this.tauschModus = true; this.seiteNeu(); } }, `„${(sel.name ?? sel.typ).slice(0, 18)}“ tauschen`)));
+    }
+    const suche = h("input", { type: "search", placeholder: "Suchen …", value: this.katalogFilter.suche, oninput: (e: Event) => { this.katalogFilter.suche = (e.target as HTMLInputElement).value; liste(); } });
+    c.append(suche);
+    const chips = h("div", { class: "chips" });
+    for (const k of ["", ...kats]) chips.append(h("button", { class: this.katalogFilter.kategorie === k ? "an" : "", onclick: () => { this.katalogFilter.kategorie = k; this.seiteNeu(); } }, k || "Alle"));
+    c.append(chips);
+    const box = h("div");
+    c.append(box);
+    const liste = () => {
+      leeren(box);
+      const s = this.katalogFilter.suche.toLowerCase();
+      for (const v of bib) {
+        if (this.katalogFilter.kategorie && (v.kategorie ?? "Sonstiges") !== this.katalogFilter.kategorie) continue;
+        if (s && !`${v.name} ${v.typ} ${v.material ?? ""} ${v.farbe ?? ""}`.toLowerCase().includes(s)) continue;
+        box.append(h("div", { class: "eintrag", onclick: () => (this.tauschModus && sel ? this.tauschen(v) : this.ausVorlage(v)) },
+          h("span", { class: "punkt", style: { background: v.farbe_hex } }),
+          h("span", { class: "name" }, v.name, v.quelle ? h("small", {}, ` · ${v.quelle}`) : null),
+          h("span", { class: "dezent" }, v.masse_bth.map((x: number) => Math.round(x * 100)).join("×")),
+          h("span", { class: "aktion" }, this.tauschModus && sel ? "⇄" : "+")));
+      }
+    };
+    liste();
+    if (sel) c.append(h("button", { class: "leise", onclick: () => this.alsVorlage(sel) }, "Auswahl als eigene Vorlage speichern"));
+    c.append(h("p", { class: "dezent" }, "Neue Möbel aus Fotos, Konzepten oder Renderings ergänzt Claude über den MCP (bibliothek_setzen / moebel_setzen). Sie erscheinen hier automatisch."));
+  }
+
+  private alsVorlage(x: any) {
+    const name = frage("Name der Vorlage", x.name ?? x.typ);
+    if (!name) return;
+    const vid = name.toLowerCase().replace(/[^a-z0-9äöüß]+/g, "-").slice(0, 40);
+    this.aendern((m) => {
+      m.bibliothek = (m.bibliothek ?? []).filter((v: any) => v.vorlage_id !== vid);
+      m.bibliothek.push({ vorlage_id: vid, typ: x.typ, name, masse_bth: [...x.masse_bth], farbe: x.farbe, farbe_hex: x.farbe_hex, material: x.material, kategorie: "Eigene", quelle: `Planer (${this.ich})`, ...(x.z ? { z: x.z } : {}) });
+    }, "moebel", `Vorlage ${name}`);
+  }
+
+  private tabFarben(c: HTMLElement) {
+    const p = this.pinsel;
+    c.append(h("h4", {}, "Pinsel"));
+    const chips = h("div", { class: "palette" });
+    for (const [n, hex] of PALETTE)
+      chips.append(h("button", { title: n, class: p.farbe === hex ? "an" : "", style: { background: hex }, onclick: () => { p.farbe = hex; p.name = n; if (/fichte|eiche/i.test(n)) p.material = "Sichtholz"; this.seiteNeu(); } }));
+    c.append(chips);
+    c.append(h("div", { class: "zeile" },
+      h("input", { type: "color", value: p.farbe, oninput: (e: Event) => { p.farbe = (e.target as HTMLInputElement).value; p.name = p.farbe; } }),
+      h("select", { onchange: (e: Event) => (p.material = (e.target as HTMLSelectElement).value) },
+        ...[...MATERIALIEN, ...BODEN_MAT].map((m) => h("option", { value: m, selected: m === p.material }, m))),
+      h("button", { class: p.aktiv ? "haupt an" : "haupt", onclick: () => this.pinselSetzen(!p.aktiv) }, p.aktiv ? "🖌 Pinsel aus" : "🖌 Wand/Boden anklicken")));
+    c.append(h("p", { class: "dezent" }, "Im Plan oder in 3D eine Wandseite bzw. einen Boden anklicken. Jede Wandseite wird einzeln gespeichert."));
+
+    const ob = this.modell.oberflaechen;
+    c.append(h("h4", {}, "Standard für alle Wände"));
+    c.append(h("div", { class: "zeile" },
+      h("input", { type: "color", value: ob.standard?.farbe_hex ?? "#f1efea", onchange: (e: Event) => this.aendern((m) => { m.oberflaechen.standard.farbe_hex = (e.target as HTMLInputElement).value; m.oberflaechen.standard.farbe = (e.target as HTMLInputElement).value; }, "haus", "Wandfarbe Standard") }),
+      h("select", { onchange: (e: Event) => this.aendern((m) => (m.oberflaechen.standard.material = (e.target as HTMLSelectElement).value), "haus", "Wandmaterial Standard") },
+        ...MATERIALIEN.map((m) => h("option", { value: m, selected: m === ob.standard?.material }, m))),
+      h("span", { class: "dezent" }, ob.standard?.farbe ?? "")));
+    c.append(h("h4", {}, `Einzelne Flächen (${(ob.flaechen ?? []).length})`));
+    for (const f of ob.flaechen ?? []) {
+      const titel = f.art === "boden" ? `Boden ${this.modell.raeume.find((r: any) => r.id === f.raum)?.name ?? f.raum}` : `${f.wand ?? f.element ?? f.id}${f.seite ? " · " + f.seite : ""}`;
+      c.append(h("div", { class: "eintrag" },
+        h("input", { type: "color", value: f.farbe_hex ?? "#ffffff", onchange: (e: Event) => this.aendern((m) => { const g = m.oberflaechen.flaechen.find((y: any) => y.id === f.id); g.farbe_hex = (e.target as HTMLInputElement).value; g.farbe = g.farbe_hex; }, "haus", `Fläche ${f.id}`) }),
+        h("span", { class: "name" }, titel, h("small", {}, ` ${f.material ?? ""}${f.x || f.y || f.z ? " (Teilfläche)" : ""}`)),
+        h("button", { class: "x", title: "Entfernen", onclick: () => this.aendern((m) => (m.oberflaechen.flaechen = m.oberflaechen.flaechen.filter((y: any) => y.id !== f.id)), "haus", `Fläche ${f.id} entfernt`) }, "×")));
+    }
+  }
+
+  private einst(fn: (e: any) => void, notiz = "Licht/Zeit") {
+    this.aendern((m) => { m.einstellungen ??= {}; fn(m.einstellungen); }, "einstellungen", notiz, false);
+  }
+
+  private tabLicht(c: HTMLElement) {
+    const e = this.modell.einstellungen ?? {};
+    const s = sonnenstand(e.breitengrad ?? 49.654, e.laengengrad ?? 9.077, e.datum ?? "2026-06-21", e.uhrzeit ?? "12:00", e.nordwinkel ?? 0);
+    const minuten = (() => { const [a, b] = String(e.uhrzeit ?? "12:00").split(":").map(Number); return a * 60 + (b || 0); })();
+    const zeitLabel = h("strong", {}, e.uhrzeit ?? "12:00");
+    c.append(h("h4", {}, "Tageszeit und Datum"));
+    c.append(h("div", { class: "zeile" },
+      h("input", { type: "date", value: e.datum ?? "2026-06-21", onchange: (ev: Event) => this.einst((x) => (x.datum = (ev.target as HTMLInputElement).value), "Datum") }),
+      ...[["21.3.", "03-21"], ["21.6.", "06-21"], ["23.9.", "09-23"], ["21.12.", "12-21"]].map(([t, d]) =>
+        h("button", { class: "klein", onclick: () => this.einst((x) => (x.datum = `${(x.datum ?? "2026").slice(0, 4)}-${d}`), "Datum") }, t))));
+    const regler = h("input", { type: "range", min: 0, max: 1439, step: 5, value: minuten, class: "breit",
+      oninput: (ev: Event) => {
+        const v = Number((ev.target as HTMLInputElement).value);
+        const t = `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
+        zeitLabel.textContent = t;
+        this.modell.einstellungen.uhrzeit = t;
+        this.szene.einstellungen(this.modell.einstellungen);
+      },
+      onchange: () => this.einst(() => {}, "Uhrzeit") });
+    c.append(h("div", { class: "zeile" }, zeitLabel, regler,
+      h("button", { class: "klein", title: "Tagesverlauf abspielen", onclick: () => this.tagAbspielen() }, this.zeitAnimation ? "■" : "▶")));
+    c.append(h("p", { class: "dezent" }, `Sonne: Azimut ${zahl(s.azimut, 0)}°, Höhe ${zahl(s.hoehe, 0)}° ${s.hoehe < 0 ? "(unter dem Horizont)" : ""}`));
+    c.append(h("div", { class: "zeile" }, h("label", {}, "Belichtung"),
+      h("input", { type: "range", min: 0.3, max: 3, step: 0.05, value: e.belichtung ?? 1, class: "breit",
+        oninput: (ev: Event) => { this.modell.einstellungen.belichtung = Number((ev.target as HTMLInputElement).value); this.szene.einstellungen(this.modell.einstellungen); },
+        onchange: () => this.einst(() => {}, "Belichtung") })));
+
+    c.append(h("h4", {}, "Lichtszenario"));
+    const sz = this.modell.szenarien ?? [];
+    c.append(h("div", { class: "chips" }, ...sz.map((x: any) => h("button", { class: e.szenario === x.id ? "an" : "", onclick: () => this.einst((y) => { y.szenario = x.id; y.dimmer = {}; }, `Szenario ${x.name}`) }, x.name))));
+    const werte = { ...((sz.find((x: any) => x.id === e.szenario)?.leuchten) ?? {}), ...(e.dimmer ?? {}) };
+    for (const l of this.szene.alleLeuchten()) {
+      const v = Math.round((werte[l.id] ?? 0) * 100);
+      c.append(h("div", { class: "eintrag licht" },
+        h("span", { class: "name" }, l.name, h("small", {}, ` ${l.lumen} lm · ${l.kelvin} K`)),
+        h("input", { type: "range", min: 0, max: 100, step: 5, value: v,
+          oninput: (ev: Event) => { this.modell.einstellungen.dimmer = { ...(this.modell.einstellungen.dimmer ?? {}), [l.id]: Number((ev.target as HTMLInputElement).value) / 100 }; this.szene.szenarioAnwenden(); },
+          onchange: () => this.einst(() => {}, `Dimmer ${l.name}`) }),
+        h("span", { class: "dezent" }, `${v} %`)));
+    }
+    c.append(h("div", { class: "zeile" },
+      h("button", { onclick: () => this.szenarioSpeichern(false) }, "Als neues Szenario"),
+      e.szenario ? h("button", { onclick: () => this.szenarioSpeichern(true) }, "Szenario überschreiben") : null));
+    c.append(h("p", { class: "dezent" }, "Die Deckenleuchten sind Platzhalter (Annahme), bis die Lichtplanung eingepflegt ist – über den MCP mit leuchten_setzen."));
+  }
+
+  private szenarioSpeichern(ueberschreiben: boolean) {
+    const e = this.modell.einstellungen;
+    const alt = (this.modell.szenarien ?? []).find((x: any) => x.id === e.szenario);
+    const werte = { ...(alt?.leuchten ?? {}), ...(e.dimmer ?? {}) };
+    for (const k of Object.keys(werte)) if (!werte[k]) delete werte[k];
+    if (ueberschreiben && alt) {
+      this.aendern((m) => { m.szenarien.find((x: any) => x.id === alt.id).leuchten = werte; m.einstellungen.dimmer = {}; }, "einstellungen", `Szenario ${alt.name}`);
+      return;
+    }
+    const name = frage("Name des Szenarios", "Mein Szenario");
+    if (!name) return;
+    const id = name.toLowerCase().replace(/[^a-z0-9äöüß]+/g, "-");
+    this.aendern((m) => { m.szenarien = (m.szenarien ?? []).filter((x: any) => x.id !== id); m.szenarien.push({ id, name, leuchten: werte }); m.einstellungen.szenario = id; m.einstellungen.dimmer = {}; }, "einstellungen", `Szenario ${name}`);
+  }
+
+  private tagAbspielen() {
+    if (this.zeitAnimation) {
+      window.clearInterval(this.zeitAnimation);
+      this.zeitAnimation = 0;
+      this.einst(() => {}, "Uhrzeit");
+      return;
+    }
+    this.zeitAnimation = window.setInterval(() => {
+      const e = this.modell.einstellungen;
+      let [a, b] = String(e.uhrzeit ?? "06:00").split(":").map(Number);
+      let v = a * 60 + b + 6;
+      if (v >= 22 * 60) v = 5 * 60;
+      e.uhrzeit = `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
+      this.szene.einstellungen(e);
+      if (this.tab === "licht") {
+        const r = document.querySelector<HTMLInputElement>("#tabinhalt input[type=range]");
+        if (r) r.value = String(v);
+        const l = document.querySelector("#tabinhalt strong");
+        if (l) l.textContent = e.uhrzeit;
+      }
+    }, 60);
+    this.seiteNeu();
+  }
+
+  private tabAnsichten(c: HTMLElement) {
+    c.append(h("div", { class: "zeile" },
+      h("button", { class: "haupt", onclick: () => this.ansichtSpeichern(), disabled: this.modus === "2d" }, "Aktuelle Ansicht speichern")));
+    for (const a of this.modell.ansichten ?? []) {
+      c.append(h("div", { class: "eintrag" },
+        h("span", { class: "name", onclick: () => this.ansichtZeigen(a) }, a.name, h("small", {}, a.begehen ? " · begehbar" : " · Übersicht")),
+        h("button", { class: "klein", title: "In Cycles rendern", onclick: () => { this.ansichtZeigen(a); this.modusSetzen("render"); } }, "Rendern"),
+        h("button", { class: "x", title: "Löschen", onclick: () => this.aendern((m) => (m.ansichten = m.ansichten.filter((x: any) => x.id !== a.id)), "einstellungen", `Ansicht ${a.name} gelöscht`) }, "×")));
+    }
+    c.append(h("div", { class: "zeile" },
+      h("button", { onclick: () => this.alleAnsichtenFotografieren() }, "Screenshot aller Ansichten"),
+      h("button", { onclick: () => this.render.alleAnsichtenRendern() }, "Alle Ansichten rendern")));
+    c.append(h("p", { class: "dezent" }, "Ansichten werden mit dem Modell gespeichert. Claude kann über den MCP weitere anlegen (ansicht_setzen)."));
+  }
+
+  ansichtZeigen(a: any) {
+    if (this.modus === "2d") this.modusSetzen("3d");
+    this.szene.ansicht(a.kamera, !!a.begehen);
+    this.kopfLeiste();
+  }
+
+  private ansichtSpeichern() {
+    const name = frage("Name der Ansicht", "Neue Ansicht");
+    if (!name) return;
+    const k = this.szene.kameraDaten();
+    const id = name.toLowerCase().replace(/[^a-z0-9äöüß]+/g, "-").slice(0, 40) || "ansicht";
+    this.aendern((m) => {
+      m.ansichten = (m.ansichten ?? []).filter((x: any) => x.id !== id);
+      m.ansichten.push({ id, name, modus: "3d", begehen: k.begehen, kamera: { pos: k.pos, ziel: k.ziel, fov: Math.round(k.fov) } });
+    }, "einstellungen", `Ansicht ${name}`);
+  }
+
+  private async alleAnsichtenFotografieren() {
+    const alt = this.szene.kameraDaten();
+    for (const a of this.modell.ansichten ?? []) {
+      this.ansichtZeigen(a);
+      await new Promise((r) => setTimeout(r, 250));
+      await this.screenshot(`${a.name} · ${this.einstellungsText()}`);
+    }
+    this.szene.ansicht(alt, alt.begehen);
+  }
+
+  private async tabStaende(c: HTMLElement) {
+    const name = h("input", { type: "text", placeholder: "Name der Variante, z. B. „Sofa an der Glasfront“" });
+    c.append(h("h4", {}, "Varianten"), h("div", { class: "zeile" }, name,
+      h("button", { class: "haupt", onclick: async () => {
+        if (!name.value.trim()) return toast("Bitte einen Namen eingeben");
+        await api.varianteSpeichern(name.value.trim(), "", JSON.parse(this.stand));
+        toast("Variante gespeichert", "ok");
+        this.seiteNeu();
+      } }, "Speichern")));
+    const vl = h("div");
+    const vs = h("div");
+    const fr = h("div");
+    c.append(vl, h("h4", {}, "Versionen (automatisch)"), vs, h("h4", {}, "Offene Fragen im Modell"), fr);
+    for (const q of this.modell.offene_fragen ?? []) fr.append(h("div", { class: "hinweis" }, typeof q === "string" ? q : JSON.stringify(q)));
+    const [varianten, versionen] = await Promise.all([api.varianten(), api.versionen()]);
+    for (const v of varianten)
+      vl.append(h("div", { class: "eintrag" },
+        h("span", { class: "name" }, v.name, h("small", {}, ` · ${zeitText(v.zeit)} · ${v.wer}`)),
+        h("button", { class: "klein", onclick: async () => {
+          if (!confirm(`Variante „${v.name}“ laden? Der aktuelle Stand bleibt als Version erhalten.`)) return;
+          const d = await api.varianteLesen(v.slug);
+          const m = d.modell;
+          this.aendern((alt) => { const ver = alt.meta.version; Object.keys(alt).forEach((k) => delete alt[k]); Object.assign(alt, structuredClone(m)); alt.meta.version = ver; }, "haus", `Variante ${v.name} geladen`);
+        } }, "Laden"),
+        h("button", { class: "x", onclick: async () => { if (confirm(`Variante „${v.name}“ löschen?`)) { await api.varianteLoeschen(v.slug); this.seiteNeu(); } } }, "×")));
+    if (!varianten.length) vl.append(h("p", { class: "dezent" }, "Noch keine Varianten."));
+    for (const v of versionen.slice(0, 40))
+      vs.append(h("div", { class: "eintrag" },
+        h("span", { class: "name" }, `v${v.version}`, h("small", {}, ` ${zeitText(v.zeit)} · ${v.wer} · ${v.notiz ?? ""}`)),
+        v.version !== this.basis ? h("button", { class: "klein", onclick: async () => {
+          if (!confirm(`Version ${v.version} wiederherstellen?`)) return;
+          const m = await api.versionLesen(v.version);
+          this.aendern((alt) => { const ver = alt.meta.version; Object.keys(alt).forEach((k) => delete alt[k]); Object.assign(alt, m); alt.meta.version = ver; }, "haus", `Version ${v.version} wiederhergestellt`);
+        } }, "Zurückholen") : h("span", { class: "dezent" }, "aktuell")));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Eigenschaften der Auswahl
+  // ---------------------------------------------------------------------------
+  eigenschaftenNeu() {
+    const p = document.getElementById("eigenschaften")!;
+    const x = this.gewaehlt();
+    p.hidden = !x;
+    leeren(p);
+    if (!x) return;
+    const setze = (feld: string, wert: any, notiz?: string) =>
+      this.aendern((m) => {
+        const y = m.moebel.find((z: any) => z.id === x.id);
+        if (feld === "pos") this.lage(m, x.id, wert);
+        else y[feld] = wert;
+        if (feld === "farbe_hex") y.farbe = wert;
+        if (feld === "z" && !wert) delete y.z;
+      }, "moebel", notiz ?? `${x.name}: ${feld}`);
+    const num = (wert: number, fn: (v: number) => void, step = 0.01) =>
+      h("input", { type: "number", step, value: Math.round(wert * 1000) / 1000, onchange: (e: Event) => { const v = parseFloat((e.target as HTMLInputElement).value.replace(",", ".")); if (!isNaN(v)) fn(v); } });
+    const warn = this.hinweise.filter((hw) => hw.ids.includes(x.id));
+    p.append(
+      h("div", { class: "kopf" },
+        h("input", { class: "titel", value: x.name ?? "", onchange: (e: Event) => setze("name", (e.target as HTMLInputElement).value) }),
+        h("button", { class: "x", onclick: () => this.waehlen(null) }, "×")),
+      h("div", { class: "raster2" },
+        h("label", {}, "Typ"), h("select", { onchange: (e: Event) => setze("typ", (e.target as HTMLSelectElement).value) }, ...[...new Set([x.typ, ...TYPEN])].map((t) => h("option", { value: t, selected: t === x.typ }, t))),
+        h("label", {}, "B × T × H (m)"), h("div", { class: "drei" }, ...[0, 1, 2].map((i) => num(x.masse_bth[i], (v) => { const mm = [...x.masse_bth]; mm[i] = Math.max(0.005, v); setze("masse_bth", mm); }))),
+        h("label", {}, "Position x / y"), h("div", { class: "zwei" }, num(x.pos[0], (v) => setze("pos", [v, x.pos[1]]), 0.05), num(x.pos[1], (v) => setze("pos", [x.pos[0], v]), 0.05)),
+        h("label", {}, "Drehung °"), h("div", { class: "zwei" }, num(x.rot_grad ?? 0, (v) => setze("rot_grad", ((v % 360) + 360) % 360), 15),
+          h("span", {}, h("button", { class: "klein", onclick: () => this.drehen(-90) }, "⟲"), h("button", { class: "klein", onclick: () => this.drehen(90) }, "⟳"))),
+        h("label", {}, "Höhe Unterkante"), num(x.z ?? 0, (v) => setze("z", v), 0.05),
+        h("label", {}, "Farbe"), h("div", { class: "zwei" }, h("input", { type: "color", value: x.farbe_hex ?? "#a0a0a0", onchange: (e: Event) => setze("farbe_hex", (e.target as HTMLInputElement).value) }),
+          h("input", { value: x.farbe ?? "", placeholder: "Farbname", onchange: (e: Event) => setze("farbe", (e.target as HTMLInputElement).value) })),
+        h("label", {}, "Material"), h("input", { value: x.material ?? "", onchange: (e: Event) => setze("material", (e.target as HTMLInputElement).value) }),
+        h("label", {}, "Preis €"), num(x.preis_eur ?? 0, (v) => setze("preis_eur", v || undefined), 1),
+        h("label", {}, "Link"), h("input", { value: x.link ?? "", placeholder: "https://…", onchange: (e: Event) => setze("link", (e.target as HTMLInputElement).value) }),
+        h("label", {}, "Notiz"), h("input", { value: x.notiz ?? "", onchange: (e: Event) => setze("notiz", (e.target as HTMLInputElement).value) })),
+      h("div", { class: "dezent" }, `${this.modell.raeume.find((r: any) => r.id === x.raum)?.name ?? x.raum ?? ""} · ${x.geschoss}${x.quelle ? " · Quelle: " + x.quelle : ""}`),
+      ...warn.map((w) => h("div", { class: "hinweis" }, w.text)),
+      h("div", { class: "zeile" },
+        h("button", { onclick: () => { this.tab = "katalog"; this.tauschModus = true; this.seiteNeu(); } }, "⇄ Tauschen"),
+        h("button", { onclick: () => this.duplizieren() }, "Duplizieren"),
+        x.link ? h("a", { href: x.link, target: "_blank", rel: "noopener", class: "knopf" }, "Shop ↗") : null,
+        h("button", { class: "warn", onclick: () => this.loeschen() }, "Löschen")),
+    );
+  }
+}
+
+const app = new App();
+(window as any).planer = app;
+app.start().catch((e) => {
+  console.error(e);
+  toast(`Start fehlgeschlagen: ${e.message}`, "fehler");
+});

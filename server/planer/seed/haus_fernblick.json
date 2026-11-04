@@ -1,0 +1,2102 @@
+{
+ "meta": {
+  "projekt": "Ferienhaus Fernblick, Hauptstraße 58a, Würzberg",
+  "version": "0.2",
+  "stand": "2026-11-04",
+  "einheiten": "Meter, Grad",
+  "ursprung": "Innenecke Nordwest EG (Innenkante Außenwand)",
+  "achsen": {
+   "x": "nach Osten",
+   "y": "nach Süden (Glasfront Terrasse liegt im Süden)",
+   "z": "nach oben ab Fertigfußboden EG"
+  },
+  "quellen": [
+   "Bauantrag 300-4 (Gesamtplan f10, 2025-01-08)",
+   "Treppen-Werkplan Kunde Bayram Nr. 24953 (04/2026)",
+   "Küchenansicht Möbel Kempf (AB L71810)",
+   "Lichtplanung 25.05.2026",
+   "Kabeldoku EG/Empore",
+   "Angaben Murat 02.–04.11.2026",
+   "ChatGPT-Renderings je Raum (Möblierungsidee)"
+  ],
+  "genauigkeit": "Maße aus Plan abgegriffen ±10 cm, wo nicht anders vermerkt. Felder 'quelle'/'sicher' kennzeichnen Annahmen."
+ },
+ "geschosse": [
+  {
+   "id": "EG",
+   "z": 0.0,
+   "lichte_hoehe_bis_schalung": 2.68,
+   "decke": {
+    "typ": "Sichtbalkendecke",
+    "balken_hoehe": 0.21,
+    "balken_breite": 0.1,
+    "balken_achsabstand": 0.625,
+    "spannrichtung": "offen",
+    "balken_unterkante_z": 2.47,
+    "schalung_dicke": 0.02,
+    "aufbau_oben": "0,045 Dämmung/Trittschall + 0,065 Estrich (Murat; 0,45 als 0,045 gelesen)",
+    "sicher": "Aufbau von Murat, Breite/Abstand/Richtung Annahme"
+   },
+   "hoehen_hinweis": "Murats 2,85 m vermutlich ab Rohboden; maßgebend GH 2,81 OKFF–OKFF laut Treppenbauer (von Murat am 04.11. bestätigt)"
+  },
+  {
+   "id": "OG",
+   "z": 2.81,
+   "z_quelle": "Treppen-Werkplan V1 12.05.2026: GH 2810, 16 Stg. à 175,62",
+   "kniestock": 1.19,
+   "kniestock_hinweis": "abgeleitet aus Traufe 4,00 − 2,81; Bauantrag nennt ca. 1,10",
+   "sparren": {
+    "sichtbar": true,
+    "richtung": "Ost-West",
+    "achsabstand": 0.8,
+    "sicher": false
+   },
+   "dach": {
+    "typ": "Satteldach",
+    "neigung_grad": 38,
+    "first_achse": "y",
+    "first_x": 3.89,
+    "traufhoehe_z": 4.0,
+    "hinweis": "Traufhöhe 4,00 m ab FFB EG bestätigt durch Küchenansicht (4000). Innenhöhe am First rechnerisch ca. 7.04 m."
+   }
+  }
+ ],
+ "raeume": [
+  {
+   "id": "schlafen",
+   "name": "Schlafzimmer",
+   "geschoss": "EG",
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     2.94,
+     0
+    ],
+    [
+     2.94,
+     5.0
+    ],
+    [
+     0,
+     5.0
+    ]
+   ],
+   "flaeche_plan": 14.7
+  },
+  {
+   "id": "hwr",
+   "name": "Abstell/HWR/Technik",
+   "geschoss": "EG",
+   "polygon": [
+    [
+     3.115,
+     0
+    ],
+    [
+     5.215,
+     0
+    ],
+    [
+     5.215,
+     3.63
+    ],
+    [
+     3.115,
+     3.63
+    ]
+   ],
+   "flaeche_plan": 7.6
+  },
+  {
+   "id": "bad",
+   "name": "Bad",
+   "geschoss": "EG",
+   "polygon": [
+    [
+     5.39,
+     0
+    ],
+    [
+     7.78,
+     0
+    ],
+    [
+     7.78,
+     3.63
+    ],
+    [
+     5.39,
+     3.63
+    ]
+   ],
+   "flaeche_plan": 8.68
+  },
+  {
+   "id": "diele",
+   "name": "Diele",
+   "geschoss": "EG",
+   "polygon": [
+    [
+     3.115,
+     3.805
+    ],
+    [
+     7.78,
+     3.805
+    ],
+    [
+     7.78,
+     6.35
+    ],
+    [
+     3.115,
+     6.35
+    ]
+   ],
+   "flaeche_plan": 12.2,
+   "hinweis": "offen zum Wohnraum zwischen Schlafzimmer-Ecke und Lamellenwand"
+  },
+  {
+   "id": "wohnen",
+   "name": "Wohnen/Kochen/Essen",
+   "geschoss": "EG",
+   "polygon": [
+    [
+     0,
+     5.175
+    ],
+    [
+     3.115,
+     5.175
+    ],
+    [
+     3.115,
+     6.525
+    ],
+    [
+     7.78,
+     6.525
+    ],
+    [
+     7.78,
+     11.105
+    ],
+    [
+     0,
+     11.105
+    ]
+   ],
+   "flaeche_plan": 36.9,
+   "luftraum": {
+    "polygon": [
+     [
+      0,
+      6.525
+     ],
+     [
+      7.78,
+      6.525
+     ],
+     [
+      7.78,
+      11.105
+     ],
+     [
+      0,
+      11.105
+     ]
+    ],
+    "hinweis": "offen bis unter das Dach"
+   }
+  },
+  {
+   "id": "kinder",
+   "name": "Kinderzimmer",
+   "geschoss": "OG",
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     3.803,
+     0
+    ],
+    [
+     3.803,
+     5.165
+    ],
+    [
+     0,
+     5.165
+    ]
+   ],
+   "flaeche_plan": 16.1,
+   "dachschraege": "Westseite: Kniestock 1,10 m an x=0, 2,0 m Höhe bei x≈1,15"
+  },
+  {
+   "id": "galerie",
+   "name": "Galerie",
+   "geschoss": "OG",
+   "polygon": [
+    [
+     3.978,
+     0
+    ],
+    [
+     7.78,
+     0
+    ],
+    [
+     7.78,
+     6.525
+    ],
+    [
+     2.98,
+     6.525
+    ],
+    [
+     2.98,
+     5.34
+    ],
+    [
+     3.978,
+     5.34
+    ]
+   ],
+   "flaeche_plan": 22.8,
+   "dachschraege": "Ostseite: Kniestock 1,10 m an x=7,78"
+  }
+ ],
+ "waende": [
+  {
+   "id": "EG-AW-N",
+   "geschoss": "EG",
+   "von": [
+    0,
+    0
+   ],
+   "bis": [
+    7.78,
+    0
+   ],
+   "dicke": 0.36,
+   "typ": "aussen"
+  },
+  {
+   "id": "EG-AW-W",
+   "geschoss": "EG",
+   "von": [
+    0,
+    0
+   ],
+   "bis": [
+    0,
+    11.105
+   ],
+   "dicke": 0.36,
+   "typ": "aussen"
+  },
+  {
+   "id": "EG-AW-O",
+   "geschoss": "EG",
+   "von": [
+    7.78,
+    0
+   ],
+   "bis": [
+    7.78,
+    11.105
+   ],
+   "dicke": 0.36,
+   "typ": "aussen"
+  },
+  {
+   "id": "EG-AW-S",
+   "geschoss": "EG",
+   "von": [
+    0,
+    11.105
+   ],
+   "bis": [
+    7.78,
+    11.105
+   ],
+   "dicke": 0.36,
+   "typ": "glasfront",
+   "hinweis": "großteils verglast, siehe Öffnungen"
+  },
+  {
+   "id": "EG-IW-schlaf-ost",
+   "geschoss": "EG",
+   "von": [
+    3.0275,
+    0
+   ],
+   "bis": [
+    3.0275,
+    5.175
+   ],
+   "dicke": 0.175,
+   "typ": "innen"
+  },
+  {
+   "id": "EG-IW-schlaf-sued",
+   "geschoss": "EG",
+   "von": [
+    0,
+    5.0875
+   ],
+   "bis": [
+    3.115,
+    5.0875
+   ],
+   "dicke": 0.175,
+   "typ": "innen"
+  },
+  {
+   "id": "EG-IW-hwr-bad",
+   "geschoss": "EG",
+   "von": [
+    5.3025,
+    0
+   ],
+   "bis": [
+    5.3025,
+    3.805
+   ],
+   "dicke": 0.175,
+   "typ": "innen"
+  },
+  {
+   "id": "EG-IW-bad-sued",
+   "geschoss": "EG",
+   "von": [
+    3.115,
+    3.7175
+   ],
+   "bis": [
+    7.78,
+    3.7175
+   ],
+   "dicke": 0.175,
+   "typ": "innen"
+  },
+  {
+   "id": "EG-IW-kueche-flur",
+   "geschoss": "EG",
+   "von": [
+    6.58,
+    6.4375
+   ],
+   "bis": [
+    7.78,
+    6.4375
+   ],
+   "dicke": 0.175,
+   "typ": "innen",
+   "hinweis": "massiv 1,2 m ab Ostwand (Murat)"
+  },
+  {
+   "id": "EG-LAMELLEN",
+   "geschoss": "EG",
+   "von": [
+    5.08,
+    6.4375
+   ],
+   "bis": [
+    6.58,
+    6.4375
+   ],
+   "dicke": 0.1,
+   "typ": "lamellen",
+   "hoehe": 2.68,
+   "hinweis": "Eichen-Lamellen bodentief bis Decke, ca. 4×6 cm, Abstand ca. 6 cm (Render)"
+  },
+  {
+   "id": "OG-AW-N",
+   "geschoss": "OG",
+   "von": [
+    0,
+    0
+   ],
+   "bis": [
+    7.78,
+    0
+   ],
+   "dicke": 0.36,
+   "typ": "aussen"
+  },
+  {
+   "id": "OG-KNIE-W",
+   "geschoss": "OG",
+   "von": [
+    0,
+    0
+   ],
+   "bis": [
+    0,
+    11.105
+   ],
+   "dicke": 0.36,
+   "typ": "kniestock",
+   "hoehe": 1.19
+  },
+  {
+   "id": "OG-KNIE-O",
+   "geschoss": "OG",
+   "von": [
+    7.78,
+    0
+   ],
+   "bis": [
+    7.78,
+    11.105
+   ],
+   "dicke": 0.36,
+   "typ": "kniestock",
+   "hoehe": 1.19
+  },
+  {
+   "id": "OG-IW-kinder-ost",
+   "geschoss": "OG",
+   "von": [
+    3.8905,
+    0
+   ],
+   "bis": [
+    3.8905,
+    5.34
+   ],
+   "dicke": 0.175,
+   "typ": "innen"
+  },
+  {
+   "id": "OG-IW-kinder-sued",
+   "geschoss": "OG",
+   "von": [
+    0,
+    5.2525
+   ],
+   "bis": [
+    3.978,
+    5.2525
+   ],
+   "dicke": 0.175,
+   "typ": "innen"
+  },
+  {
+   "id": "OG-BRUESTUNG",
+   "geschoss": "OG",
+   "von": [
+    0,
+    6.525
+   ],
+   "bis": [
+    7.78,
+    6.525
+   ],
+   "dicke": 0.05,
+   "typ": "glasbruestung",
+   "hoehe": 1.0,
+   "hinweis": "Glasbrüstung zum Luftraum; Verlauf am Treppenloch prüfen"
+  }
+ ],
+ "oeffnungen": [
+  {
+   "id": "F-schlafen",
+   "geschoss": "EG",
+   "typ": "fenster",
+   "p1": [
+    0,
+    0.94
+   ],
+   "p2": [
+    0,
+    2.13
+   ],
+   "hoehe": 1.25,
+   "bruestung": 0.95
+  },
+  {
+   "id": "F-bad",
+   "geschoss": "EG",
+   "typ": "fenster",
+   "p1": [
+    7.78,
+    1.04
+   ],
+   "p2": [
+    7.78,
+    2.04
+   ],
+   "hoehe": 1.0,
+   "bruestung": 1.2
+  },
+  {
+   "id": "F-kueche",
+   "geschoss": "EG",
+   "typ": "fenster",
+   "p1": [
+    7.78,
+    7.745
+   ],
+   "p2": [
+    7.78,
+    8.825
+   ],
+   "hoehe": 0.81,
+   "bruestung": 1.334,
+   "quelle": "Küchenansicht"
+  },
+  {
+   "id": "T-haus",
+   "geschoss": "EG",
+   "typ": "haustuer",
+   "p1": [
+    7.78,
+    3.99
+   ],
+   "p2": [
+    7.78,
+    5.55
+   ],
+   "hoehe": 2.2,
+   "bruestung": 0,
+   "hinweis": "Tür ca. 1,0 m + Seitenteil Milchglas; Tür schlägt nach innen zur Badwand (Norden) auf"
+  },
+  {
+   "id": "T-schlafen",
+   "geschoss": "EG",
+   "typ": "tuer",
+   "p1": [
+    2.94,
+    4.05
+   ],
+   "p2": [
+    2.94,
+    4.95
+   ],
+   "hoehe": 2.01,
+   "bruestung": 0,
+   "anschlag": "in den Raum",
+   "sicher": false
+  },
+  {
+   "id": "T-hwr",
+   "geschoss": "EG",
+   "typ": "tuer",
+   "p1": [
+    4.24,
+    3.63
+   ],
+   "p2": [
+    5.09,
+    3.63
+   ],
+   "hoehe": 2.01,
+   "bruestung": 0,
+   "sicher": false
+  },
+  {
+   "id": "T-bad",
+   "geschoss": "EG",
+   "typ": "tuer",
+   "p1": [
+    5.48,
+    3.63
+   ],
+   "p2": [
+    6.38,
+    3.63
+   ],
+   "hoehe": 2.01,
+   "bruestung": 0,
+   "sicher": false
+  },
+  {
+   "id": "D-diele-wohnen",
+   "geschoss": "EG",
+   "typ": "durchgang",
+   "p1": [
+    3.115,
+    6.525
+   ],
+   "p2": [
+    5.08,
+    6.525
+   ],
+   "hoehe": 2.68,
+   "bruestung": 0
+  },
+  {
+   "id": "G-fest",
+   "geschoss": "EG",
+   "typ": "festverglasung",
+   "p1": [
+    0.43,
+    11.105
+   ],
+   "p2": [
+    3.7,
+    11.105
+   ],
+   "hoehe": 2.4,
+   "bruestung": 0
+  },
+  {
+   "id": "G-HST",
+   "geschoss": "EG",
+   "typ": "hebeschiebetuer",
+   "p1": [
+    4.1,
+    11.105
+   ],
+   "p2": [
+    7.33,
+    11.105
+   ],
+   "hoehe": 2.4,
+   "bruestung": 0,
+   "hinweis": "Flügel am Mittelpfosten fährt nach Osten auf → Öffnung ca. x 4,10–5,70 (Murat)",
+   "oeffnung": [
+    [
+     4.1,
+     11.105
+    ],
+    [
+     5.7,
+     11.105
+    ]
+   ]
+  },
+  {
+   "id": "F-kinder",
+   "geschoss": "OG",
+   "typ": "fenster",
+   "p1": [
+    1.86,
+    0
+   ],
+   "p2": [
+    2.85,
+    0
+   ],
+   "hoehe": 2.0,
+   "bruestung": 0
+  },
+  {
+   "id": "F-galerie",
+   "geschoss": "OG",
+   "typ": "fenster",
+   "p1": [
+    4.94,
+    0
+   ],
+   "p2": [
+    5.93,
+    0
+   ],
+   "hoehe": 2.0,
+   "bruestung": 0
+  },
+  {
+   "id": "T-kinder",
+   "geschoss": "OG",
+   "typ": "schiebetuer",
+   "p1": [
+    3.978,
+    3.13
+   ],
+   "p2": [
+    3.978,
+    3.98
+   ],
+   "hoehe": 2.01,
+   "bruestung": 0,
+   "laufrichtung": "öffnet von Nord nach Süd (von der Galerie gesehen von rechts nach links)",
+   "parkbereich": [
+    [
+     3.978,
+     3.98
+    ],
+    [
+     3.978,
+     4.85
+    ]
+   ],
+   "parkseite": "Galerie (Annahme)",
+   "quelle": "Murat 04.11."
+  }
+ ],
+ "feste_elemente": [
+  {
+   "id": "treppe",
+   "typ": "treppe_halbgewendelt",
+   "geschoss": "EG",
+   "quelle": "Treppen-Werkplan 24953",
+   "stufen": "≥14 (Zeichnung zeigt 1–14)",
+   "lauflinie_auftritt": 0.26,
+   "unterer_lauf": {
+    "polygon": [
+     [
+      0,
+      6.195
+     ],
+     [
+      1.563,
+      6.195
+     ],
+     [
+      1.563,
+      7.115
+     ],
+     [
+      0,
+      7.115
+     ]
+    ],
+    "stufen": "1–4 + Wendel 5–9 an Westwand",
+    "antritt": {
+     "pos": [
+      1.563,
+      6.655
+     ],
+     "richtung": "Westen"
+    },
+    "suedseite": "geschlossene Wange"
+   },
+   "oberer_lauf": {
+    "polygon": [
+     [
+      0,
+      5.175
+     ],
+     [
+      2.98,
+      5.175
+     ],
+     [
+      2.98,
+      6.095
+     ],
+     [
+      0,
+      6.095
+     ]
+    ],
+    "stufen": "10–14…",
+    "richtung": "Osten, Austritt Galerie bei x≈2,98"
+   },
+   "gesamt_aussenmass": {
+    "entlang_westwand": 1.94,
+    "tiefe_unterer_lauf": 1.563,
+    "deckenloch_laenge": 2.98
+   },
+   "steigungen": 16,
+   "steigung": 0.17562,
+   "auftritt": 0.26,
+   "geschosshoehe": 2.81,
+   "laufbreite_ik": 0.9,
+   "wange_ak": 0.92,
+   "belag": "Eiche Parkett 40 mm",
+   "wangen": "Stahl RAL 9005 matt",
+   "absturzsicherung": "bauseits",
+   "kopffreiheit": ">2,00",
+   "quelle_detail": "Werkplan Warkentin/VIWELD V1 12.05.2026",
+   "sicher": "Antritt Stufe 1 an Ostende des unteren Laufs, Lauf nach Westen, Wende 5–8 an Westwand, 9–16 entlang Schlafzimmerwand nach Osten – laut Werkplan"
+  },
+  {
+   "id": "kueche-eck",
+   "typ": "unterschrank_eck",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     6.58,
+     6.525
+    ],
+    [
+     7.18,
+     7.125
+    ]
+   ],
+   "hoehe": 0.88,
+   "quelle": "Murat"
+  },
+  {
+   "id": "kueche-eck-zeile",
+   "typ": "unterschrank",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     6.525
+    ],
+    [
+     7.78,
+     7.125
+    ]
+   ],
+   "hoehe": 0.88,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "kueche-spuele",
+   "typ": "spuelenschrank",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     7.125
+    ],
+    [
+     7.78,
+     7.785
+    ]
+   ],
+   "hoehe": 0.88,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "kueche-gs",
+   "typ": "geschirrspueler",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     7.785
+    ],
+    [
+     7.78,
+     8.385
+    ]
+   ],
+   "hoehe": 0.88,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "kueche-schub1",
+   "typ": "unterschrank",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     8.385
+    ],
+    [
+     7.78,
+     9.175
+    ]
+   ],
+   "hoehe": 0.88,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "kueche-backofen",
+   "typ": "backofen_kochfeld",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     9.175
+    ],
+    [
+     7.78,
+     9.795
+    ]
+   ],
+   "hoehe": 0.88,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "kueche-schub2",
+   "typ": "unterschrank",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     9.795
+    ],
+    [
+     7.78,
+     10.385
+    ]
+   ],
+   "hoehe": 0.88,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "kueche-hochschrank",
+   "typ": "hochschrank_kuehlschrank",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     7.18,
+     10.385
+    ],
+    [
+     7.78,
+     11.035
+    ]
+   ],
+   "hoehe": 2.2,
+   "farbe": "Cremegrau matt, Griffe schwarz, Arbeitsplatte Beton steinweiß",
+   "quelle": "Küchenansicht Kempf"
+  },
+  {
+   "id": "split-klima",
+   "typ": "klimageraet_innen",
+   "geschoss": "EG",
+   "pos": [
+    7.7,
+    8.285
+   ],
+   "z": 2.85,
+   "masse": [
+    0.9,
+    0.22,
+    0.3
+   ],
+   "hinweis": "über Küchenfenster, Montagehöhe 2,80–3,00 m (Kühllast-Doku)"
+  },
+  {
+   "id": "pfette",
+   "typ": "pfette",
+   "pos_x": 3.89,
+   "richtung": "Nord-Süd",
+   "unterkante_z": 5.0,
+   "quelle": "Murat 04.11.: ca. 5 m",
+   "hinweis": "Pendel Esstisch hängt darunter"
+  },
+  {
+   "id": "bad-dusche",
+   "typ": "dusche_walkin",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     6.38,
+     0.0
+    ],
+    [
+     7.78,
+     0.9
+    ]
+   ],
+   "glaswand": [
+    [
+     6.38,
+     0.9
+    ],
+    [
+     7.25,
+     0.9
+    ]
+   ],
+   "armaturen": "schwarz, Kopfbrause",
+   "quelle": "Foto Bad 04.11. (Ist)",
+   "sicher": false
+  },
+  {
+   "id": "bad-wc",
+   "typ": "wc_wandhaengend",
+   "geschoss": "EG",
+   "pos": [
+    7.5,
+    1.55
+   ],
+   "rot": 270,
+   "vorwand": [
+    [
+     7.58,
+     0.9
+    ],
+    [
+     7.78,
+     2.3
+    ]
+   ],
+   "vorwand_hoehe": 1.2,
+   "quelle": "Foto Bad (Ist)",
+   "sicher": false
+  },
+  {
+   "id": "bad-wt",
+   "typ": "waschtisch_aufsatz",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     5.39,
+     2.35
+    ],
+    [
+     5.85,
+     3.35
+    ]
+   ],
+   "hoehe": 0.85,
+   "farbe": "Fronten weiß geriffelt, Platte Eiche, Aufsatzbecken weiß gesprenkelt",
+   "quelle": "Foto Bad (Ist)",
+   "sicher": false
+  },
+  {
+   "id": "bad-hk",
+   "typ": "handtuchheizkoerper",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     5.39,
+     1.7
+    ],
+    [
+     5.47,
+     2.2
+    ]
+   ],
+   "hoehe": 1.2,
+   "farbe": "schwarz",
+   "quelle": "Foto Bad (Ist)"
+  },
+  {
+   "id": "hwr-speicher",
+   "typ": "speicher_technik",
+   "geschoss": "EG",
+   "rechteck": [
+    [
+     4.0,
+     1.0
+    ],
+    [
+     4.9,
+     2.6
+    ]
+   ],
+   "sicher": false,
+   "hinweis": "2 Speicher laut Lichtplan-Skizze; HWR braucht kein Einrichtungskonzept (Murat)"
+  }
+ ],
+ "moebel": [
+  {
+   "id": "w-ecksofa",
+   "raum": "wohnen",
+   "typ": "ecksofa",
+   "name": "CARRYHOME Ecksofa mit Recamiere (Kandidat)",
+   "masse_bth": [
+    2.84,
+    1.62,
+    1.0
+   ],
+   "pos": [
+    0.81,
+    8.535
+   ],
+   "rot_grad": 270,
+   "farbe": "greige/sand",
+   "material": "Cord",
+   "verschiebbar": true,
+   "quelle": "Murat 02.11.",
+   "form": "L: lange Seite an Westwand (y 7,115–9,955), Recamiere an Treppenwange (x 0–1,62)",
+   "preis_eur": 899
+  },
+  {
+   "id": "w-couchtisch",
+   "raum": "wohnen",
+   "typ": "couchtisch_rund",
+   "name": "Couchtisch Ø 70",
+   "masse_bth": [
+    0.7,
+    0.7,
+    0.4
+   ],
+   "pos": [
+    1.75,
+    8.775
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz/Metall schwarz",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "w-teppich",
+   "raum": "wohnen",
+   "typ": "teppich",
+   "name": "Wollteppich Lounge",
+   "masse_bth": [
+    2.3,
+    2.7,
+    0.01
+   ],
+   "pos": [
+    1.25,
+    8.525
+   ],
+   "rot_grad": 0,
+   "farbe": "natur/sand",
+   "material": "Wolle",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "w-esstisch",
+   "raum": "wohnen",
+   "typ": "esstisch",
+   "name": "Esstisch 180×90",
+   "masse_bth": [
+    0.9,
+    1.8,
+    0.75
+   ],
+   "pos": [
+    3.9,
+    8.775
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche geölt",
+   "material": "Holz, Kufen schwarz",
+   "verschiebbar": true,
+   "quelle": "Murat: 180×90"
+  },
+  {
+   "id": "w-esssofa",
+   "raum": "wohnen",
+   "typ": "esssofa",
+   "name": "Esssofa/Polsterbank 180",
+   "masse_bth": [
+    0.65,
+    1.8,
+    0.8
+   ],
+   "pos": [
+    3.125,
+    8.775
+   ],
+   "rot_grad": 0,
+   "farbe": "olivgrün",
+   "material": "abwischbarer Stoff",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "hinweis": "Sitzhöhe 46–48, Rücken ≤80 cm zur Lounge"
+  },
+  {
+   "id": "w-stuhl-ost-1",
+   "raum": "wohnen",
+   "typ": "stuhl",
+   "name": "Esszimmerstuhl",
+   "masse_bth": [
+    0.5,
+    0.55,
+    0.85
+   ],
+   "pos": [
+    4.675,
+    8.425
+   ],
+   "rot_grad": 90,
+   "farbe": "olivgrün",
+   "material": "Stoff abwischbar",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "w-stuhl-ost-2",
+   "raum": "wohnen",
+   "typ": "stuhl",
+   "name": "Esszimmerstuhl",
+   "masse_bth": [
+    0.5,
+    0.55,
+    0.85
+   ],
+   "pos": [
+    4.675,
+    9.125
+   ],
+   "rot_grad": 90,
+   "farbe": "olivgrün",
+   "material": "Stoff abwischbar",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "w-stuhl-nord",
+   "raum": "wohnen",
+   "typ": "stuhl",
+   "name": "Esszimmerstuhl Kopf",
+   "masse_bth": [
+    0.5,
+    0.55,
+    0.85
+   ],
+   "pos": [
+    3.9,
+    7.55
+   ],
+   "rot_grad": 180,
+   "farbe": "olivgrün",
+   "material": "Stoff abwischbar",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "hinweis": "kein Kopfstuhl im Süden (Weg zur Hebeschiebetür)"
+  },
+  {
+   "id": "w-olive",
+   "raum": "wohnen",
+   "typ": "pflanze",
+   "name": "Olivenbaum",
+   "masse_bth": [
+    0.5,
+    0.5,
+    1.6
+   ],
+   "pos": [
+    0.45,
+    10.6
+   ],
+   "rot_grad": 0,
+   "farbe": "grün",
+   "material": "Topf Beton",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "k-regal-l",
+   "raum": "wohnen",
+   "typ": "wandregal",
+   "name": "Wandregal Küche links",
+   "masse_bth": [
+    0.25,
+    0.6,
+    0.04
+   ],
+   "pos": [
+    7.655,
+    7.3
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Murat: 3 Regale à 60 cm",
+   "z": 1.5
+  },
+  {
+   "id": "k-regal-r1",
+   "raum": "wohnen",
+   "typ": "wandregal",
+   "name": "Wandregal Küche rechts unten",
+   "masse_bth": [
+    0.25,
+    0.6,
+    0.04
+   ],
+   "pos": [
+    7.655,
+    10.0
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 1.5
+  },
+  {
+   "id": "k-regal-r2",
+   "raum": "wohnen",
+   "typ": "wandregal",
+   "name": "Wandregal Küche rechts oben",
+   "masse_bth": [
+    0.25,
+    0.6,
+    0.04
+   ],
+   "pos": [
+    7.655,
+    10.0
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 1.9
+  },
+  {
+   "id": "s-bett",
+   "raum": "schlafen",
+   "typ": "bett",
+   "name": "Doppelbett 180×200 (z. B. IDANÄS 190 außen)",
+   "masse_bth": [
+    1.9,
+    2.1,
+    1.1
+   ],
+   "pos": [
+    1.47,
+    1.05
+   ],
+   "rot_grad": 0,
+   "farbe": "beige",
+   "material": "Polster",
+   "verschiebbar": true,
+   "quelle": "Render + Konzept"
+  },
+  {
+   "id": "s-nt-l",
+   "raum": "schlafen",
+   "typ": "nachttisch_haengend",
+   "name": "Nachttisch hängend",
+   "masse_bth": [
+    0.4,
+    0.3,
+    0.18
+   ],
+   "pos": [
+    0.27,
+    0.15
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 0.45
+  },
+  {
+   "id": "s-nt-r",
+   "raum": "schlafen",
+   "typ": "nachttisch_haengend",
+   "name": "Nachttisch hängend",
+   "masse_bth": [
+    0.4,
+    0.3,
+    0.18
+   ],
+   "pos": [
+    2.67,
+    0.15
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 0.45
+  },
+  {
+   "id": "s-regal",
+   "raum": "schlafen",
+   "typ": "wandregal",
+   "name": "Wandboard über Bett",
+   "masse_bth": [
+    1.6,
+    0.2,
+    0.04
+   ],
+   "pos": [
+    1.47,
+    0.1
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 1.5
+  },
+  {
+   "id": "s-teppich",
+   "raum": "schlafen",
+   "typ": "teppich",
+   "name": "Teppich",
+   "masse_bth": [
+    2.4,
+    1.7,
+    0.01
+   ],
+   "pos": [
+    1.47,
+    2.05
+   ],
+   "rot_grad": 0,
+   "farbe": "natur",
+   "material": "Wolle/Jute",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "s-schrank",
+   "raum": "schlafen",
+   "typ": "kleiderschrank",
+   "name": "Kleiderschrank 150",
+   "masse_bth": [
+    1.5,
+    0.6,
+    2.0
+   ],
+   "pos": [
+    0.85,
+    4.7
+   ],
+   "rot_grad": 180,
+   "farbe": "weiß/Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Konzept (Render ohne Schrank)"
+  },
+  {
+   "id": "d-bank",
+   "raum": "diele",
+   "typ": "schuhbank",
+   "name": "Schuhbank schwarz/Eiche",
+   "masse_bth": [
+    1.0,
+    0.4,
+    0.5
+   ],
+   "pos": [
+    7.2,
+    6.15
+   ],
+   "rot_grad": 180,
+   "farbe": "schwarz/Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "d-garderobe",
+   "raum": "diele",
+   "typ": "garderobe_lamellen",
+   "name": "Lamellen-Garderobe mit Haken + Bord",
+   "masse_bth": [
+    0.9,
+    0.1,
+    1.3
+   ],
+   "pos": [
+    7.2,
+    6.3
+   ],
+   "rot_grad": 180,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 0.95
+  },
+  {
+   "id": "d-spiegel",
+   "raum": "diele",
+   "typ": "spiegel",
+   "name": "Standspiegel/Wandspiegel schwarz",
+   "masse_bth": [
+    0.4,
+    0.03,
+    1.6
+   ],
+   "pos": [
+    7.76,
+    5.85
+   ],
+   "rot_grad": 270,
+   "farbe": "schwarz",
+   "material": "Glas",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "hinweis": "Spiegelzone südlich der Haustür ca. 0,55 m (Schalter FL-1)"
+  },
+  {
+   "id": "d-board",
+   "raum": "diele",
+   "typ": "wandregal",
+   "name": "Wandboard Eiche",
+   "masse_bth": [
+    0.9,
+    0.25,
+    0.06
+   ],
+   "pos": [
+    3.65,
+    3.93
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 0.9,
+   "hinweis": "Render zeigt Bord links neben der Haustür an der Badwand; dort schlägt die Haustür auf → an HWR-Wand westlich der HWR-Tür verlegt"
+  },
+  {
+   "id": "d-laeufer",
+   "raum": "diele",
+   "typ": "teppich",
+   "name": "Läufer",
+   "masse_bth": [
+    0.8,
+    2.0,
+    0.01
+   ],
+   "pos": [
+    6.4,
+    4.8
+   ],
+   "rot_grad": 90,
+   "farbe": "natur",
+   "material": "Wolle",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "k1-bett",
+   "raum": "kinder",
+   "typ": "bett_einzel",
+   "name": "Einzel-/Tagesbett 80×200 (BRIMNES)",
+   "masse_bth": [
+    0.87,
+    2.06,
+    0.45
+   ],
+   "pos": [
+    0.45,
+    1.15
+   ],
+   "rot_grad": 0,
+   "farbe": "beige",
+   "material": "Polster/Holz",
+   "verschiebbar": true,
+   "quelle": "Render + IKEA-Auswahl 18.10.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "k2-bett",
+   "raum": "kinder",
+   "typ": "bett_einzel",
+   "name": "Einzel-/Tagesbett 80×200 (BRIMNES)",
+   "masse_bth": [
+    0.87,
+    2.06,
+    0.45
+   ],
+   "pos": [
+    0.45,
+    4.05
+   ],
+   "rot_grad": 0,
+   "farbe": "beige",
+   "material": "Polster/Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "geschoss": "OG"
+  },
+  {
+   "id": "k-nt",
+   "raum": "kinder",
+   "typ": "nachttisch",
+   "name": "Nachttisch",
+   "masse_bth": [
+    0.4,
+    0.35,
+    0.5
+   ],
+   "pos": [
+    0.25,
+    2.6
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "geschoss": "OG"
+  },
+  {
+   "id": "k-tisch",
+   "raum": "kinder",
+   "typ": "schreibtisch",
+   "name": "Schreibtisch LAGKAPTEN/ALEX 140×60",
+   "masse_bth": [
+    1.4,
+    0.6,
+    0.73
+   ],
+   "pos": [
+    2.7,
+    0.32
+   ],
+   "rot_grad": 0,
+   "farbe": "grau/schwarz",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "geschoss": "OG",
+   "hinweis": "vor bodentiefem Fenster; alternativ an Ostwand"
+  },
+  {
+   "id": "k-stuhl",
+   "raum": "kinder",
+   "typ": "stuhl",
+   "name": "Kinderstuhl LOBERGET",
+   "masse_bth": [
+    0.5,
+    0.5,
+    0.8
+   ],
+   "pos": [
+    2.7,
+    0.9
+   ],
+   "rot_grad": 180,
+   "farbe": "weiß",
+   "material": "Kunststoff",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "geschoss": "OG"
+  },
+  {
+   "id": "k-teppich",
+   "raum": "kinder",
+   "typ": "teppich",
+   "name": "Teppich",
+   "masse_bth": [
+    1.6,
+    2.3,
+    0.01
+   ],
+   "pos": [
+    2.1,
+    2.7
+   ],
+   "rot_grad": 0,
+   "farbe": "natur",
+   "material": "Jute",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "geschoss": "OG"
+  },
+  {
+   "id": "b-spiegel",
+   "raum": "bad",
+   "typ": "spiegel_rund",
+   "name": "Runder Spiegel schwarz, hinterleuchtet Ø 70",
+   "masse_bth": [
+    0.7,
+    0.03,
+    0.7
+   ],
+   "pos": [
+    5.41,
+    2.85
+   ],
+   "rot_grad": 90,
+   "farbe": "schwarz",
+   "material": "Glas/Metall",
+   "verschiebbar": true,
+   "quelle": "Render",
+   "z": 1.2
+  },
+  {
+   "id": "b-teppich",
+   "raum": "bad",
+   "typ": "teppich",
+   "name": "Badläufer",
+   "masse_bth": [
+    0.6,
+    1.2,
+    0.01
+   ],
+   "pos": [
+    6.55,
+    2.4
+   ],
+   "rot_grad": 0,
+   "farbe": "natur",
+   "material": "Baumwolle",
+   "verschiebbar": true,
+   "quelle": "Render"
+  },
+  {
+   "id": "g-3er",
+   "raum": "galerie",
+   "typ": "sofa",
+   "name": "3er-Sofa GULLVALLA (Rücken an Kniestock)",
+   "masse_bth": [
+    0.83,
+    1.82,
+    0.78
+   ],
+   "pos": [
+    7.36,
+    1.85
+   ],
+   "rot_grad": 0,
+   "farbe": "greige",
+   "material": "Stoff",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG",
+   "hinweis": "aus IKEA-Auswahl 18.10. umgenutzt; Rückenhöhe 78 < Kniestock 110"
+  },
+  {
+   "id": "g-2er",
+   "raum": "galerie",
+   "typ": "sofa",
+   "name": "2er-Sofa GULLVALLA (Rücken an Nordgiebel)",
+   "masse_bth": [
+    1.42,
+    0.83,
+    0.78
+   ],
+   "pos": [
+    6.75,
+    0.42
+   ],
+   "rot_grad": 0,
+   "farbe": "graugrün",
+   "material": "Stoff",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-tisch",
+   "raum": "galerie",
+   "typ": "couchtisch",
+   "name": "Couchtisch Eiche 100×55",
+   "masse_bth": [
+    1.0,
+    0.55,
+    0.4
+   ],
+   "pos": [
+    5.85,
+    1.85
+   ],
+   "rot_grad": 90,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-teppich",
+   "raum": "galerie",
+   "typ": "teppich",
+   "name": "Hochflor-/Wollteppich 200×290",
+   "masse_bth": [
+    2.0,
+    2.9,
+    0.01
+   ],
+   "pos": [
+    5.95,
+    2.1
+   ],
+   "rot_grad": 0,
+   "farbe": "sand",
+   "material": "Wolle",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-tv",
+   "raum": "galerie",
+   "typ": "tv_board_haengend",
+   "name": "TV-Board hängend 180 + TV 55\"",
+   "masse_bth": [
+    0.4,
+    1.8,
+    0.35
+   ],
+   "pos": [
+    4.18,
+    1.45
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche/schwarz",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "z": 0.25,
+   "geschoss": "OG",
+   "hinweis": "an Wand Kinderzimmer, nördlich der Schiebetür; optional"
+  },
+  {
+   "id": "g-sessel",
+   "raum": "galerie",
+   "typ": "sessel",
+   "name": "Lesesessel am Giebelfenster",
+   "masse_bth": [
+    0.8,
+    0.8,
+    0.9
+   ],
+   "pos": [
+    4.5,
+    0.55
+   ],
+   "rot_grad": 45,
+   "farbe": "olivgrün",
+   "material": "Stoff",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-stehl",
+   "raum": "galerie",
+   "typ": "stehleuchte",
+   "name": "Stehleuchte (Hue, Lichtplan)",
+   "masse_bth": [
+    0.35,
+    0.35,
+    1.6
+   ],
+   "pos": [
+    4.2,
+    0.2
+   ],
+   "rot_grad": 0,
+   "farbe": "schwarz",
+   "material": "Metall",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-regal",
+   "raum": "galerie",
+   "typ": "regal_niedrig",
+   "name": "Niedriges Regal Bücher/Spiele am Kniestock",
+   "masse_bth": [
+    0.4,
+    2.0,
+    0.6
+   ],
+   "pos": [
+    7.55,
+    4.2
+   ],
+   "rot_grad": 0,
+   "farbe": "Eiche",
+   "material": "Holz",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-pouf1",
+   "raum": "galerie",
+   "typ": "sitzsack",
+   "name": "Sitzsack/Bodenkissen",
+   "masse_bth": [
+    0.7,
+    0.7,
+    0.45
+   ],
+   "pos": [
+    6.4,
+    4.1
+   ],
+   "rot_grad": 0,
+   "farbe": "olivgrün",
+   "material": "Cord",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  },
+  {
+   "id": "g-pouf2",
+   "raum": "galerie",
+   "typ": "sitzsack",
+   "name": "Sitzsack/Bodenkissen",
+   "masse_bth": [
+    0.7,
+    0.7,
+    0.45
+   ],
+   "pos": [
+    5.55,
+    4.3
+   ],
+   "rot_grad": 0,
+   "farbe": "sand",
+   "material": "Cord",
+   "verschiebbar": true,
+   "quelle": "Konzept Claude 04.11.",
+   "geschoss": "OG"
+  }
+ ],
+ "leuchten": [
+  {
+   "id": "pendel-esstisch",
+   "typ": "pendel_cluster",
+   "raum": "wohnen",
+   "pos": [
+    3.9,
+    8.775
+   ],
+   "baldachin": "rund, unter Pfette",
+   "anzahl": 3,
+   "anordnung": "kreisförmig, gestaffelt",
+   "unterkante_ueber_tisch": 0.7,
+   "quelle": "Murat 02.11."
+  }
+ ],
+ "offene_fragen": [
+  "Sichtbalken EG: Breite, Achsabstand, Spannrichtung",
+  "Galerie: 1 m breiter Streifen vor der Glasbrüstung bleibt möbelfrei (keine Kletterhilfe)",
+  "Galerie: Konzept Chill-Lounge von Claude, noch nicht abgestimmt; TV optional",
+  "Bad: Lage Dusche/WC/Waschtisch aus Foto geschätzt (±15 cm)",
+  "Schlafzimmer: Bett-Steckdose K14 (0,60 m v. li., h 0,70) liegt hinter dem Kopfteil",
+  "Diele: Wandboard aus Render kollidiert mit Haustür-Schwenkbereich"
+ ],
+ "oberflaechen": {
+  "standard": {
+   "material": "Rollputz",
+   "farbe": "weiß",
+   "gilt_fuer": "alle Wandflächen ohne eigenen Eintrag"
+  },
+  "flaechen": [
+   {
+    "id": "holz-wohnen-nord-EG",
+    "geschoss": "EG",
+    "wand": "EG-IW-schlaf-sued",
+    "seite": "Süd (Wohnraum/Treppe)",
+    "x": [
+     0,
+     3.115
+    ],
+    "z": [
+     0,
+     2.81
+    ],
+    "material": "Sichtholz",
+    "farbe": "Fichte natur, Dreischichtplatte (wie Balken)",
+    "quelle": "Murat 04.11."
+   },
+   {
+    "id": "holz-wohnen-nord-OG",
+    "geschoss": "OG",
+    "wand": "OG-IW-kinder-sued",
+    "seite": "Süd (Treppenloch/Luftraum)",
+    "x": [
+     0,
+     3.978
+    ],
+    "z": [
+     2.81,
+     5.0
+    ],
+    "bis": "bis an Pfette/Dach",
+    "material": "Sichtholz",
+    "farbe": "Fichte natur, Dreischichtplatte (wie Balken)",
+    "quelle": "Murat 04.11.: Wand Wohnzimmer Richtung Schlaf-/Kinderzimmer bis ganz hoch an die Pfette",
+    "hinweis": "bildet mit der EG-Fläche eine durchgehende Holzwand vom Wohnraum aus gesehen; Deckenstirn dazwischen vermutlich mit verkleidet"
+   },
+   {
+    "id": "holz-galerie-west",
+    "geschoss": "OG",
+    "wand": "OG-IW-kinder-ost",
+    "seite": "Ost (Galerie)",
+    "y": [
+     0,
+     5.34
+    ],
+    "z": [
+     2.81,
+     5.0
+    ],
+    "bis": "bis Dach",
+    "material": "Sichtholz",
+    "farbe": "Fichte natur, Dreischichtplatte (wie Balken)",
+    "quelle": "Murat 04.11.: Wand zwischen Empore und Kinderzimmer",
+    "kinderzimmerseite": "Rollputz weiß (Murat bestätigt)"
+   },
+   {
+    "id": "alu-bad-nord",
+    "geschoss": "EG",
+    "raum": "bad",
+    "wand": "EG-AW-N",
+    "seite": "Süd (Bad)",
+    "x": [
+     5.39,
+     7.78
+    ],
+    "z": [
+     0,
+     2.47
+    ],
+    "material": "Aluverbundplatte",
+    "farbe": "hellgrau/greige matt",
+    "quelle": "Foto Bad 04.11.",
+    "sicher": false
+   },
+   {
+    "id": "alu-bad-dusche-ost",
+    "geschoss": "EG",
+    "raum": "bad",
+    "wand": "EG-AW-O",
+    "seite": "West (Bad)",
+    "y": [
+     0,
+     0.9
+    ],
+    "z": [
+     0,
+     2.47
+    ],
+    "material": "Aluverbundplatte",
+    "farbe": "hellgrau/greige matt",
+    "quelle": "Foto Bad",
+    "sicher": false
+   },
+   {
+    "id": "alu-bad-vorwand",
+    "geschoss": "EG",
+    "raum": "bad",
+    "element": "bad-wc vorwand",
+    "z": [
+     0,
+     1.2
+    ],
+    "material": "Aluverbundplatte",
+    "farbe": "hellgrau/greige matt",
+    "quelle": "Foto Bad",
+    "sicher": false
+   },
+   {
+    "id": "alu-bad-waschtisch",
+    "geschoss": "EG",
+    "raum": "bad",
+    "wand": "EG-IW-hwr-bad",
+    "seite": "Ost (Bad)",
+    "y": [
+     2.0,
+     3.63
+    ],
+    "z": [
+     0,
+     1.25
+    ],
+    "material": "Aluverbundplatte",
+    "farbe": "hellgrau/greige matt",
+    "quelle": "Foto Bad (Spritzschutz hinter Waschtisch)",
+    "sicher": false
+   }
+  ]
+ }
+}

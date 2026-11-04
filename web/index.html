@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Fernblick-Planer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 28V14L16 4l12 10v14z' fill='%233f5d45'/%3E%3Cpath d='M11 28v-8h10v8' fill='%23f1efea'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="app">
+    <header id="kopf">
+      <button id="seiteSchalter" title="Seitenleiste ein/aus">☰</button>
+      <div class="marke">Fernblick<span>Planer</span></div>
+      <div class="umschalter" id="modi">
+        <button data-modus="2d">Plan 2D</button><button data-modus="3d">3D</button><button data-modus="render">Rendering</button>
+      </div>
+      <div class="umschalter klein" id="geschosse">
+        <button data-g="EG">EG</button><button data-g="OG">OG</button><button data-g="alle">Alles</button>
+      </div>
+      <div class="umschalter klein" id="kameramodus">
+        <button data-k="orbit">Umschauen</button><button data-k="begehen">Begehen</button>
+      </div>
+      <label class="schalter" id="dachSchalter"><input type="checkbox" id="dach" /> Dach</label>
+      <div class="luecke"></div>
+      <button id="rueck" title="Rückgängig (Strg+Z)">↶</button>
+      <button id="vor" title="Wiederholen (Strg+Y)">↷</button>
+      <button id="foto" title="Screenshot speichern">Screenshot</button>
+      <span id="status"></span>
+      <span id="benutzer"></span>
+    </header>
+    <aside id="seite">
+      <nav id="tabs">
+        <button data-tab="moebel">Möbel</button><button data-tab="katalog">Katalog</button><button data-tab="farben">Farben</button><button data-tab="licht">Licht</button><button data-tab="ansichten">Ansichten</button><button data-tab="staende">Stände</button>
+      </nav>
+      <div id="tabinhalt"></div>
+    </aside>
+    <main id="buehne" data-modus="3d">
+      <div id="ansicht3d"></div>
+      <div id="ansicht2d"></div>
+      <div id="ansichtRender"></div>
+      <div id="hilfe"></div>
+      <section id="eigenschaften" hidden></section>
+    </main>
+    <div id="banner" hidden></div>
+    <div id="toast"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

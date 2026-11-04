@@ -1,0 +1,60 @@
+# Fernblick-Planer – Stack für Portainer (Server)
+# Oberfläche hinter Authelia; /mcp, OAuth-Token/Registrierung und /.well-known öffentlich (Bearer/OAuth).
+# Daten (Modell, Versionen, Varianten, Bilder, Render-Aufträge, OAuth-SQLite) unter ${DATEN_PFAD}.
+name: ${STACK:-fernblick-planer}
+
+x-planer: &planer
+  image: ghcr.io/${GHCR_OWNER:-<owner>}/fernblick-planer:${IMAGE_TAG:-latest}
+  restart: unless-stopped
+  environment:
+    PLANER_DATA: /data
+    PLANER_PUBLIC_URL: https://${PLANER_HOST:-planer.example.org}
+    # Remote-User nur von Traefik annehmen
+    PLANER_TRUSTED_PROXIES: ${TRUSTED_PROXIES:-traefik}
+    # Authelia-Benutzer mit Zugriff (Komma-getrennt), leer = alle angemeldeten
+    PLANER_ALLOWED_USERS: ${ALLOWED_USERS:-}
+    PLANER_RENDER_THREADS: ${RENDER_THREADS:-5}
+    TZ: Europe/Berlin
+  volumes:
+    - ${DATEN_PFAD:-/srv/fernblick-planer}/data:/data
+
+services:
+  app:
+    <<: *planer
+    container_name: ${STACK:-fernblick-planer}
+    networks: [traefik]
+    mem_limit: 768m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.services.${STACK:-fernblick-planer}.loadbalancer.server.port=8000
+      - traefik.http.routers.${STACK:-fernblick-planer}.rule=Host(`${PLANER_HOST:-planer.example.org}`)
+      - traefik.http.routers.${STACK:-fernblick-planer}.priority=10
+      - traefik.http.routers.${STACK:-fernblick-planer}.entrypoints=websecure
+      - traefik.http.routers.${STACK:-fernblick-planer}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.routers.${STACK:-fernblick-planer}.middlewares=${TRAEFIK_MIDDLEWARES_WEB:-authelia@file}
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.rule=Host(`${PLANER_HOST:-planer.example.org}`) && (Path(`/mcp`) || PathPrefix(`/.well-known/`) || Path(`/oauth/token`) || Path(`/oauth/register`) || Path(`/api/health`))
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.priority=100
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.entrypoints=websecure
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.service=${STACK:-fernblick-planer}
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.middlewares=${STACK:-fernblick-planer}-ohne-sso,${TRAEFIK_MIDDLEWARES_PUBLIC:-ratelimit@file}
+      # Auf öffentlichen Pfaden nie einen vom Client gesetzten Remote-User durchreichen
+      - traefik.http.middlewares.${STACK:-fernblick-planer}-ohne-sso.headers.customrequestheaders.Remote-User=
+      - traefik.http.middlewares.${STACK:-fernblick-planer}-ohne-sso.headers.customrequestheaders.Remote-Groups=
+      - traefik.http.middlewares.${STACK:-fernblick-planer}-ohne-sso.headers.customrequestheaders.Remote-Email=
+      - traefik.http.middlewares.${STACK:-fernblick-planer}-ohne-sso.headers.customrequestheaders.Remote-Name=
+
+  worker:
+    <<: *planer
+    container_name: ${STACK:-fernblick-planer}-worker
+    command: ["python", "-m", "planer.render_worker"]
+    healthcheck:
+      disable: true
+    network_mode: none
+    cpus: ${RENDER_CPUS:-5}
+    mem_limit: 6g
+
+networks:
+  traefik:
+    external: true
