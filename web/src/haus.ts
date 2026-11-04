@@ -761,7 +761,8 @@ function gelaenderBauen(m: any, M: Masse, weg: TreppenWeg, ziele: Record<string,
         const dz = hoehe - 0.06 - (k * (hoehe - 0.18)) / staebe;
         balken(v3(a[0], a[1], za + dz), v3(b[0], b[1], zb + dz), 0.012);
       }
-      const nP = Math.max(1, Math.round(L / 1.0));
+      // Pfostenabstand entlang der Steigung (ca. 0,8–0,9 m); bei einem Abschnitt per „pfosten“ überschreibbar
+      const nP = pts.length === 2 && f.pfosten ? Math.max(1, Math.round(f.pfosten) - 1) : Math.max(1, Math.round(Math.hypot(L, zb - za) / 0.9));
       for (let k = 0; k <= nP; k++) {
         if (k === 0 && i > 0) continue;
         const t = k / nP;

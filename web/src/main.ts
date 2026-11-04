@@ -1064,7 +1064,8 @@ class App {
       }
       if (String(f.typ).startsWith("gelaender")) {
         felder.push(h("label", {}, "Höhe Handlauf"), num(f.hoehe ?? 0.9, (v) => setze((g) => (g.hoehe = v), `${f.id} Höhe`)),
-          h("label", {}, "Relingstäbe"), num(f.staebe ?? 4, (v) => setze((g) => (g.staebe = Math.max(0, Math.round(v))), `${f.id} Stäbe`), 1));
+          h("label", {}, "Relingstäbe"), num(f.staebe ?? 4, (v) => setze((g) => (g.staebe = Math.max(0, Math.round(v))), `${f.id} Stäbe`), 1),
+          h("label", {}, "Pfosten"), num(f.pfosten ?? 0, (v) => setze((g) => { if (v >= 2) g.pfosten = Math.round(v); else delete g.pfosten; }, `${f.id} Pfosten`), 1));
       }
     } else {
       const quer = !!f.x;
