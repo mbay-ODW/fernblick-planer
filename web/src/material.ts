@@ -1,8 +1,8 @@
 // Materialien (Standard-PBR, damit GLB-Export und Cycles-Import sauber funktionieren)
 import * as THREE from "three";
-import { tex } from "./texturen";
+import { tex, dielenTextur } from "./texturen";
 
-export type Art = "holz" | "stoff" | "putz" | "metall" | "glas" | "beton" | "glatt" | "spiegel" | "parkett" | "fliese" | "gras" | "leder";
+export type Art = "holz" | "stoff" | "putz" | "metall" | "glas" | "beton" | "glatt" | "spiegel" | "parkett" | "fliese" | "gras" | "leder" | "schalung";
 
 export function artAusMaterial(material?: string, typ?: string): Art {
   const m = `${material ?? ""} ${typ ?? ""}`.toLowerCase();
@@ -56,6 +56,9 @@ export function mat(farbe: string, art: Art = "glatt", extra: { name?: string; e
       break;
     case "beton":
       m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8, map: tex.beton() });
+      break;
+    case "schalung":
+      m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.85, map: tex.schalung() });
       break;
     case "gras":
       m = new THREE.MeshStandardMaterial({ color: col, roughness: 1, map: tex.gras() });
@@ -134,4 +137,33 @@ export function nachNormaleTeilen(geo: THREE.BufferGeometry, dir: THREE.Vector3)
   out.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3));
   if (uv) out.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2));
   return out;
+}
+
+/**
+ * Bodenbelag (nicht gecacht, eigene Texturtransformation): material Klickvinyl/Parkett/Dielen/Fliese/Beton/Teppich,
+ * dielenbreite/-laenge in m, richtung_grad 0 = Dielen in Nord-Süd-Richtung, 90 = Ost-West, 45 = diagonal.
+ */
+const dielenCache = new Map<string, THREE.Texture>();
+export function bodenMaterial(b: any, name: string): THREE.Material {
+  const material = String(b.material ?? "Klickvinyl").toLowerCase();
+  const farbe = b.farbe_hex ?? "#c8a274";
+  const key = `${material}|${farbe}|${b.dielenbreite}|${b.dielenlaenge}|${b.richtung_grad}|${name}`;
+  if (cache.has(key)) return cache.get(key)!;
+  let m: THREE.MeshStandardMaterial;
+  if (/fliese|stein/.test(material)) m = mat(farbe, "fliese").clone() as THREE.MeshStandardMaterial;
+  else if (/beton|estrich/.test(material)) m = mat(farbe, "beton").clone() as THREE.MeshStandardMaterial;
+  else if (/teppich/.test(material)) m = mat(farbe, "stoff").clone() as THREE.MeshStandardMaterial;
+  else {
+    const br = Number(b.dielenbreite ?? 0.2), la = Number(b.dielenlaenge ?? 1.2);
+    const tk = `${br}|${la}`;
+    if (!dielenCache.has(tk)) dielenCache.set(tk, dielenTextur(br, la));
+    const t = dielenCache.get(tk)!.clone();
+    t.needsUpdate = true;
+    t.repeat.set(1 / (4 * br), 1 / (2 * la));
+    t.rotation = ((b.richtung_grad ?? 0) * Math.PI) / 180;
+    m = new THREE.MeshStandardMaterial({ color: new THREE.Color(farbe), roughness: /vinyl/.test(material) ? 0.42 : 0.55, map: t });
+  }
+  m.name = name;
+  cache.set(key, m);
+  return m;
 }

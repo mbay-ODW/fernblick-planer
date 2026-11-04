@@ -2,7 +2,7 @@
 // Modellkoordinaten: x nach Osten, y nach Süden, z nach oben. three.js: X = x, Y = z, Z = y.
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { mat, nachNormaleTeilen, artAusMaterial, Art } from "./material";
+import { mat, nachNormaleTeilen, artAusMaterial, Art, bodenMaterial } from "./material";
 
 export type P2 = [number, number];
 export const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, z, y);
@@ -386,28 +386,38 @@ export function seitenName(w: WandInfo, seite: "plus" | "minus"): string {
   return ny > 0 ? "Süd" : "Nord";
 }
 
-function wandStandardMat(w: WandInfo, std: any, seite: "plus" | "minus"): THREE.Material {
+/** Fassade (Außenseite der Außenwände): Standard senkrechte Holzschalung, über oberflaechen.fassade änderbar */
+export function fassadenMat(m: any): THREE.Material {
+  const f = m.oberflaechen?.fassade ?? {};
+  const material = String(f.material ?? "Holzschalung senkrecht").toLowerCase();
+  const art: Art = /schalung|holz/.test(material) ? "schalung" : /putz/.test(material) ? "putz" : /beton/.test(material) ? "beton" : "glatt";
+  return mat(f.farbe_hex ?? "#7a6450", art, { name: `Fassade ${f.material ?? "Holzschalung"}` });
+}
+
+function wandStandardMat(w: WandInfo, std: any, seite: "plus" | "minus", fassade: THREE.Material, M: Masse): THREE.Material {
   const innen = w.typ === "innen" || w.typ === "lamellen";
-  // Außenseite von Außenwänden: Putz hell
-  const mx = w.a[0] + w.nx * (seite === "plus" ? 1 : -1);
-  void mx;
   if (!innen) {
-    const cx = 3.89, cy = 5.5;
+    // Innenseite = Seite zur Hausmitte; Vorbau-Wände unter dem Vordach: zur Terrasse hin ebenfalls Fassade
+    const cx = M.W / 2, cy = Math.min(M.L / 2, (w.a[1] + w.b[1]) / 2);
     const d = (cx - w.a[0]) * w.nx + (cy - w.a[1]) * w.ny;
     const istInnen = (d >= 0) === (seite === "plus");
-    if (!istInnen) return mat("#e9e6df", "putz");
+    const vorbau = Math.min(w.a[1], w.b[1]) >= M.L - 0.4 && Math.abs(w.uy) > 0.5;
+    if (!istInnen || vorbau) return fassade;
   }
   return mat(farbeFlaeche(std), artFlaeche(std));
 }
 
-function oberflaechenAnwenden(m: any, waende: WandInfo[], gruppe: THREE.Group, wandMeshes: THREE.Mesh[]) {
+function oberflaechenAnwenden(m: any, waende: WandInfo[], gruppe: THREE.Group, wandMeshes: THREE.Mesh[], M: Masse) {
   const ob = m.oberflaechen ?? {};
   const std = ob.standard ?? { farbe: "weiß", material: "Rollputz" };
+  const fassade = fassadenMat(m);
   for (const me of wandMeshes) {
     const w = waende.find((x) => x.id === me.userData.wand)!;
     const mats = me.material as THREE.Material[];
-    mats[0] = wandStandardMat(w, std, "plus");
-    mats[1] = wandStandardMat(w, std, "minus");
+    mats[0] = wandStandardMat(w, std, "plus", fassade, M);
+    mats[1] = wandStandardMat(w, std, "minus", fassade, M);
+    // Vorbau-Wände unter dem Vordach: auch Stirnseiten und Oberkante in Fassadenoptik
+    if (w.typ !== "innen" && Math.min(w.a[1], w.b[1]) >= M.L - 0.4 && Math.abs(w.uy) > 0.5) mats[2] = fassade;
   }
   for (const f of ob.flaechen ?? []) {
     if (!f.wand) continue;
@@ -947,16 +957,18 @@ export function hausBauen(m: any): HausErgebnis {
       u = Math.max(u, b);
     }
   }
-  oberflaechenAnwenden(m, waende, gruppe, wandMeshes);
+  oberflaechenAnwenden(m, waende, gruppe, wandMeshes, M);
 
   // Böden
   const ob = m.oberflaechen ?? {};
+  // Böden: eigener Eintrag je Raum (art: boden) > boden_standard (Wohnräume) > Vorgabe
+  const bodenStd = { material: "Klickvinyl", farbe: "Eiche natur", farbe_hex: "#c8a274", dielenbreite: 0.2, dielenlaenge: 1.2, richtung_grad: 0, ...(ob.boden_standard ?? {}) };
   const bodenMat = (raum: any) => {
     const f = (ob.flaechen ?? []).find((x: any) => x.art === "boden" && x.raum === raum.id);
-    if (f) return mat(farbeFlaeche(f), artFlaeche(f).replace("putz", "parkett") as Art, { name: `Boden ${raum.id}` });
+    if (f) return bodenMaterial({ ...bodenStd, ...f, farbe_hex: f.farbe_hex ?? farbeFlaeche(f) }, `Boden ${raum.id}`);
     if (raum.id === "bad") return mat("#c9c4bb", "fliese", { name: "Boden Bad" });
     if (raum.id === "hwr") return mat("#bdb8ae", "beton", { name: "Boden HWR" });
-    return mat("#c8a274", "parkett", { name: "Parkett Eiche" });
+    return bodenMaterial(bodenStd, "Boden Standard");
   };
   const aussenW = 0.36;
   teile.eg.add(prisma([[-aussenW, -aussenW], [M.W + aussenW, -aussenW], [M.W + aussenW, M.L + aussenW], [-aussenW, M.L + aussenW]], -0.3, -0.001, mat("#8f8a82", "beton")));
@@ -968,7 +980,7 @@ export function hausBauen(m: any): HausErgebnis {
     ziel.add(me);
   }
   // Parkett auch unter den Türen / Lücken im EG
-  teile.eg.add(flaeche([[0, 0], [M.W, 0], [M.W, M.L], [0, M.L]], 0.0005, mat("#c8a274", "parkett", { name: "Parkett Eiche" })));
+  teile.eg.add(flaeche([[0, 0], [M.W, 0], [M.W, M.L], [0, M.L]], 0.0005, bodenMaterial(bodenStd, "Boden Standard")));
 
   // OG-Decke (Sichtholz), Balken, Deckenstirn
   const loch = m.feste_elemente.find((f: any) => String(f.typ).startsWith("treppe"))?.gesamt_aussenmass?.deckenloch_laenge ?? 2.98;
@@ -995,25 +1007,64 @@ export function hausBauen(m: any): HausErgebnis {
   teile.ogDecke.add(decke);
 
   // OG-Boden als Platte (Oberseite) – Räume liegen darüber
-  const ogBoden = flaeche(ogPoly, M.ogZ, mat("#c8a274", "parkett", { name: "Parkett Eiche" }));
+  const ogBoden = flaeche(ogPoly, M.ogZ, bodenMaterial(bodenStd, "Boden Standard"));
   ogBoden.userData = { art: "boden", geschoss: "OG" };
   teile.og.add(ogBoden);
 
-  // Südgiebel verglast über dem EG
+  // Südgiebel: Wand (außen Fassade, innen Putz) mit zwei Giebelfenstern über den EG-Verglasungen,
+  // Brüstungsband über der Geschossdecke und Abstand zur Dachschräge (Foto Südansicht)
   {
-    const pts = [new THREE.Vector2(0, M.ogZ), new THREE.Vector2(M.W, M.ogZ), new THREE.Vector2(M.W, M.traufe),
-      new THREE.Vector2(M.firstX, dachInnen(M, M.firstX)), new THREE.Vector2(0, M.traufe)];
-    const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
-    const me = new THREE.Mesh(geo, glas);
-    me.position.set(0, 0, M.L + 0.18);
-    me.userData = { art: "glas" };
-    teile.dach.add(me);
+    const gs = (m.geschosse.find((g: any) => g.id === "OG")?.dach ?? {}).giebel_sued ?? {};
+    const band = gs.band ?? 0.3, rand = gs.abstand_dach ?? 0.22, d = 0.36;
+    const xs = (x: number) => dachInnen(M, x);
+    const umriss = [new THREE.Vector2(-d, M.ogZ), new THREE.Vector2(M.W + d, M.ogZ), new THREE.Vector2(M.W + d, xs(M.W + d)),
+      new THREE.Vector2(M.firstX, xs(M.firstX)), new THREE.Vector2(-d, xs(-d))];
+    const shape = new THREE.Shape(umriss);
+    const sw = waende.find((w) => w.id === "EG-AW-S");
+    const spannen: [number, number][] = gs.fenster ?? (sw ? sw.oeffnungen.filter((o) => o.z1 - o.z0 > 1.5).map((o) => {
+      const a = sw.a[0] + sw.ux * o.u0, b = sw.a[0] + sw.ux * o.u1;
+      return [Math.min(a, b), Math.max(a, b)] as [number, number];
+    }) : [[0.43, 3.7], [4.1, 7.33]]);
+    const fensterPolys: THREE.Vector2[][] = [];
+    for (const [x0, x1] of spannen) {
+      const zb = M.ogZ + band;
+      const pts = [new THREE.Vector2(x0, zb), new THREE.Vector2(x1, zb)];
+      const oben = (x: number) => xs(x) - rand / Math.cos(Math.atan(M.tan));
+      if (oben(x1) > zb + 0.15) pts.push(new THREE.Vector2(x1, oben(x1)));
+      if (x0 < M.firstX && M.firstX < x1) pts.push(new THREE.Vector2(M.firstX, oben(M.firstX)));
+      if (oben(x0) > zb + 0.15) pts.push(new THREE.Vector2(x0, oben(x0)));
+      if (pts.length < 3) continue;
+      fensterPolys.push(pts);
+      shape.holes.push(new THREE.Path(pts));
+    }
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: false });
+    geo.translate(0, 0, M.L);
+    const g2 = nachNormaleTeilen(geo, new THREE.Vector3(0, 0, 1));
+    const innenMat = mat(farbeFlaeche(ob.standard ?? {}), artFlaeche(ob.standard ?? {}));
+    const giebel = new THREE.Mesh(g2, [fassadenMat(m), innenMat, rest]);
+    giebel.castShadow = true;
+    giebel.receiveShadow = true;
+    giebel.userData = { art: "giebel" };
+    teile.dach.add(giebel);
     const r = mat(ZARGE, "metall", { name: "Rahmen" });
-    teile.dach.add(box(M.W + 0.72, 0.12, 0.12, r, M.W / 2, M.L + 0.18, M.ogZ + 0.06));
-    for (let i = 0; i <= 6; i++) {
-      const x = (M.W * i) / 6;
-      const top = dachInnen(M, x);
-      teile.dach.add(box(0.07, top - M.ogZ, 0.1, r, x, M.L + 0.18, (M.ogZ + top) / 2));
+    for (const pts of fensterPolys) {
+      const gl = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(pts)), glas);
+      gl.position.z = M.L + d / 2;
+      gl.userData = { art: "glas" };
+      teile.dach.add(gl);
+      // Rahmen umlaufend und ein senkrechter Pfosten in der Mitte
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        const L = a.distanceTo(b);
+        const st = new THREE.Mesh(new THREE.BoxGeometry(L, 0.06, 0.08), r);
+        st.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, M.L + d / 2);
+        st.rotation.z = Math.atan2(b.y - a.y, b.x - a.x);
+        teile.dach.add(st);
+      }
+      const xm = (Math.min(...pts.map((p) => p.x)) + Math.max(...pts.map((p) => p.x))) / 2;
+      const zb = Math.min(...pts.map((p) => p.y));
+      const zt = Math.min(xs(xm) - rand, Math.max(...pts.map((p) => p.y)));
+      if (zt - zb > 0.4) teile.dach.add(box(0.06, zt - zb, 0.08, r, xm, M.L + d / 2, (zb + zt) / 2));
     }
   }
 

@@ -19,7 +19,12 @@ const PALETTE: [string, string][] = [
   ["Anthrazit", "#3e4043"], ["Sichtholz Fichte", "#d9b98a"], ["Eiche", "#b98c55"],
 ];
 const MATERIALIEN = ["Rollputz", "Glattputz", "Kalkputz", "Sichtholz", "Aluverbundplatte", "Fliese", "Beton", "Tapete"];
-const BODEN_MAT = ["Parkett", "Dielen", "Fliese", "Beton", "Teppich"];
+const BODEN_MAT = ["Klickvinyl", "Parkett", "Dielen", "Fliese", "Beton", "Teppich"];
+const BODEN_DEKORE: [string, string, string][] = [
+  ["Eiche natur", "Klickvinyl", "#c8a274"], ["Eiche hell", "Klickvinyl", "#ddc29a"], ["Eiche gekalkt", "Klickvinyl", "#e2d6c3"],
+  ["Eiche grau", "Klickvinyl", "#a99c8a"], ["Eiche geräuchert", "Klickvinyl", "#7d6248"], ["Nussbaum", "Klickvinyl", "#6b4a33"],
+  ["Steinoptik hellgrau", "Fliese", "#c9c4bb"], ["Steinoptik anthrazit", "Fliese", "#5d5b58"], ["Beton-Optik", "Beton", "#a8a49c"],
+];
 const WANDTYPEN = /^(wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend)/;
 const TYPEN = ["wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
   "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
@@ -677,6 +682,39 @@ class App {
       h("select", { onchange: (e: Event) => this.aendern((m) => (m.oberflaechen.standard.material = (e.target as HTMLSelectElement).value), "haus", "Wandmaterial Standard") },
         ...MATERIALIEN.map((m) => h("option", { value: m, selected: m === ob.standard?.material }, m))),
       h("span", { class: "dezent" }, ob.standard?.farbe ?? "")));
+    // Böden
+    c.append(h("h4", {}, "Böden"));
+    const bStd = { material: "Klickvinyl", farbe: "Eiche natur", farbe_hex: "#c8a274", dielenbreite: 0.2, dielenlaenge: 1.2, richtung_grad: 0, ...(ob.boden_standard ?? {}) };
+    c.append(h("div", { class: "boden" }, h("strong", {}, "Standard (alle Wohnräume)"),
+      ...this.bodenSteuerung(bStd, (neu) => this.aendern((m) => (m.oberflaechen.boden_standard = { ...bStd, ...neu }), "haus", "Boden Standard"))));
+    for (const r of this.modell.raeume) {
+      const eigen = (ob.flaechen ?? []).find((f: any) => f.art === "boden" && f.raum === r.id);
+      const setze = (neu: any) => this.aendern((m) => {
+        const fl = (m.oberflaechen.flaechen ??= []);
+        const i = fl.findIndex((f: any) => f.art === "boden" && f.raum === r.id);
+        const alt = i >= 0 ? fl[i] : { id: `boden-${r.id}`, art: "boden", raum: r.id, ...bStd };
+        const wert = { ...alt, ...neu, quelle: `Planer (${this.ich})` };
+        if (i >= 0) fl[i] = wert;
+        else fl.push(wert);
+      }, "haus", `Boden ${r.name}`);
+      const zeile = h("div", { class: "boden" },
+        h("div", { class: "zeile" }, h("strong", {}, `${r.name} · ${r.geschoss}`),
+          h("select", { onchange: (e: Event) => {
+            const v = (e.target as HTMLSelectElement).value;
+            if (v === "eigen") setze({});
+            else this.aendern((m) => (m.oberflaechen.flaechen = m.oberflaechen.flaechen.filter((f: any) => !(f.art === "boden" && f.raum === r.id))), "haus", `Boden ${r.name} wie Standard`);
+          } }, h("option", { value: "std", selected: !eigen }, ["bad", "hwr"].includes(r.id) ? "Vorgabe (Fliese/Estrich)" : "wie Standard"), h("option", { value: "eigen", selected: !!eigen }, "eigener Boden"))));
+      if (eigen) zeile.append(...this.bodenSteuerung({ ...bStd, ...eigen }, setze));
+      c.append(zeile);
+    }
+
+    // Fassade
+    const fa = { material: "Holzschalung senkrecht", farbe_hex: "#7a6450", ...(ob.fassade ?? {}) };
+    c.append(h("h4", {}, "Fassade"), h("div", { class: "zeile" },
+      h("input", { type: "color", value: fa.farbe_hex, onchange: (e: Event) => this.aendern((m) => (m.oberflaechen.fassade = { ...fa, farbe_hex: (e.target as HTMLInputElement).value, farbe: (e.target as HTMLInputElement).value }), "haus", "Fassade Farbe") }),
+      h("select", { onchange: (e: Event) => this.aendern((m) => (m.oberflaechen.fassade = { ...fa, material: (e.target as HTMLSelectElement).value }), "haus", "Fassade Material") },
+        ...["Holzschalung senkrecht", "Putz", "Beton", "Glatt"].map((x) => h("option", { value: x, selected: x === fa.material }, x)))));
+
     c.append(h("h4", {}, `Einzelne Flächen (${(ob.flaechen ?? []).length})`));
     for (const f of ob.flaechen ?? []) {
       const titel = f.art === "boden" ? `Boden ${this.modell.raeume.find((r: any) => r.id === f.raum)?.name ?? f.raum}` : `${f.wand ?? f.element ?? f.id}${f.seite ? " · " + f.seite : ""}`;
@@ -685,6 +723,29 @@ class App {
         h("span", { class: "name" }, titel, h("small", {}, ` ${f.material ?? ""}${f.x || f.y || f.z ? " (Teilfläche)" : ""}`)),
         h("button", { class: "x", title: "Entfernen", onclick: () => this.aendern((m) => (m.oberflaechen.flaechen = m.oberflaechen.flaechen.filter((y: any) => y.id !== f.id)), "haus", `Fläche ${f.id} entfernt`) }, "×")));
     }
+  }
+
+  /** Bedienelemente für einen Bodenbelag: Dekor, Farbe, Verlegerichtung, Dielenformat */
+  private bodenSteuerung(b: any, setze: (neu: any) => void): HTMLElement[] {
+    const holz = !/fliese|stein|beton|estrich|teppich/i.test(b.material ?? "");
+    const deko = h("select", { onchange: (e: Event) => { const d = BODEN_DEKORE.find((x) => x[0] === (e.target as HTMLSelectElement).value); if (d) setze({ material: d[1], farbe: d[0], farbe_hex: d[2] }); } },
+      h("option", { value: "" }, "Dekor wählen …"), ...BODEN_DEKORE.map(([n, , hex]) => h("option", { value: n, selected: hex === b.farbe_hex }, n)));
+    const out: HTMLElement[] = [
+      h("div", { class: "zeile" }, deko,
+        h("input", { type: "color", value: b.farbe_hex ?? "#c8a274", title: "Farbe frei wählen", onchange: (e: Event) => setze({ farbe_hex: (e.target as HTMLInputElement).value, farbe: (e.target as HTMLInputElement).value }) }),
+        h("select", { title: "Belag", onchange: (e: Event) => setze({ material: (e.target as HTMLSelectElement).value }) },
+          ...BODEN_MAT.map((x) => h("option", { value: x, selected: x === b.material }, x)))),
+    ];
+    if (holz)
+      out.push(h("div", { class: "zeile" },
+        h("select", { title: "Verlegerichtung", onchange: (e: Event) => setze({ richtung_grad: Number((e.target as HTMLSelectElement).value) }) },
+          ...([[0, "Dielen Nord–Süd (zur Glasfront)"], [90, "Dielen Ost–West"], [45, "diagonal 45°"], [135, "diagonal 135°"]] as [number, string][]).map(([v, t]) => h("option", { value: v, selected: Number(b.richtung_grad ?? 0) === v }, t))),
+        h("label", { class: "dezent" }, "B×L cm"),
+        h("input", { type: "number", class: "lumen", min: 8, max: 40, step: 1, value: Math.round((b.dielenbreite ?? 0.2) * 100), title: "Dielenbreite cm",
+          onchange: (e: Event) => setze({ dielenbreite: Number((e.target as HTMLInputElement).value) / 100 }) }),
+        h("input", { type: "number", class: "lumen", min: 40, max: 300, step: 5, value: Math.round((b.dielenlaenge ?? 1.2) * 100), title: "Dielenlänge cm",
+          onchange: (e: Event) => setze({ dielenlaenge: Number((e.target as HTMLInputElement).value) / 100 }) })));
+    return out;
   }
 
   private einst(fn: (e: any) => void, notiz = "Licht/Zeit") {

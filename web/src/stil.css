@@ -234,3 +234,7 @@ details.schiene .dezent.kurz { width: 34px; }
 details.schiene .zeile.spot select { min-width: 92px; }
 details.schiene .zeile.spot label { min-width: 40px; }
 details.schiene .zeile.spot select { min-width: 0; width: 82px; }
+.boden { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--grund); border-radius: 8px; }
+.boden strong { font-size: 12px; font-weight: 600; flex: 1; }
+.boden select { font-size: 12px; padding: 3px 5px; }
+.boden .zeile { flex-wrap: wrap; }

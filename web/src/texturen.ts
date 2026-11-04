@@ -26,6 +26,37 @@ function rauschen(c: CanvasRenderingContext2D, n: number, staerke: number, basis
 }
 
 const cache = new Map<string, THREE.Texture>();
+
+/** Dielen-Kachel: 4 Dielen nebeneinander, 2 Reihen versetzt → Kachel = 4·breite × 2·laenge (m) */
+export function dielenTextur(breite: number, laenge: number): THREE.CanvasTexture {
+  const n = 1024;
+  return leinwand(n, (c) => {
+    const bw = n / 4, bl = n / 2;
+    for (let s = 0; s < 4; s++) {
+      const versatz = ((s * 0.37) % 1) * bl;
+      for (let r = -1; r < 3; r++) {
+        const y = r * bl + versatz;
+        const g = 212 + ((s * 7 + r * 13) % 5) * 8;
+        c.fillStyle = `rgb(${g},${g * 0.97},${g * 0.93})`;
+        c.fillRect(s * bw, y, bw, bl);
+        for (let i = 0; i < 16; i++) {
+          const x0 = s * bw + ((i * 37 + s * 11 + r * 5) % 97) / 97 * bw;
+          c.strokeStyle = `rgba(90,65,40,${0.05 + ((i * 7) % 10) / 100})`;
+          c.lineWidth = 0.8 + (i % 3) * 0.6;
+          c.beginPath();
+          for (let yy = y; yy <= y + bl; yy += 12) c.lineTo(x0 + Math.sin(yy * 0.012 + i + s) * 3, yy);
+          c.stroke();
+        }
+        c.fillStyle = "rgba(55,38,24,0.4)";
+        c.fillRect(s * bw, y, bw, 2);
+      }
+      c.fillStyle = "rgba(55,38,24,0.35)";
+      c.fillRect(s * bw, 0, 2, n);
+    }
+    rauschen(c, n, 8);
+    void breite; void laenge;
+  });
+}
 function gemerkt(k: string, f: () => THREE.Texture) {
   if (!cache.has(k)) cache.set(k, f());
   return cache.get(k)!;
@@ -114,6 +145,29 @@ export const tex = {
           c.fill();
         }
         rauschen(c, n, 16);
+      }),
+    ),
+  schalung: () =>
+    gemerkt("schalung", () =>
+      leinwand(512, (c, n) => {
+        // senkrechte Boden-Deckel-/Rhombusschalung, 8 Bretter je Meter
+        const b = n / 8;
+        for (let i = 0; i < 8; i++) {
+          const g = 200 + ((i * 29) % 5) * 9;
+          c.fillStyle = `rgb(${g},${g},${g})`;
+          c.fillRect(i * b, 0, b, n);
+          for (let k = 0; k < 10; k++) {
+            const x0 = i * b + ((k * 31 + i * 17) % 50) / 50 * b;
+            c.strokeStyle = `rgba(40,30,20,${0.05 + (k % 4) * 0.03})`;
+            c.lineWidth = 0.7 + (k % 3) * 0.5;
+            c.beginPath();
+            for (let y = 0; y <= n; y += 8) c.lineTo(x0 + Math.sin(y * 0.02 + k + i) * 1.5, y);
+            c.stroke();
+          }
+          c.fillStyle = "rgba(20,14,8,0.55)";
+          c.fillRect(i * b, 0, 3, n);
+        }
+        rauschen(c, n, 10);
       }),
     ),
   gras: () =>
