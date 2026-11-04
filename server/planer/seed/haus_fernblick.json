@@ -492,7 +492,7 @@
    "id": "OG-BRUESTUNG",
    "geschoss": "OG",
    "von": [
-    0,
+    2.98,
     6.525
    ],
    "bis": [
@@ -502,7 +502,25 @@
    "dicke": 0.05,
    "typ": "glasbruestung",
    "hoehe": 1.0,
-   "hinweis": "Glasbrüstung zum Luftraum; Verlauf am Treppenloch prüfen"
+   "hinweis": "Glasbrüstung zum Luftraum, L-förmig: entlang der Luftraumkante bis zur Treppe",
+   "quelle": "Murat 04.11.2026"
+  },
+  {
+   "id": "OG-BRUESTUNG-TREPPE",
+   "geschoss": "OG",
+   "von": [
+    2.98,
+    6.525
+   ],
+   "bis": [
+    2.98,
+    6.095
+   ],
+   "dicke": 0.05,
+   "typ": "glasbruestung",
+   "hoehe": 1.0,
+   "hinweis": "kurzer Schenkel des L bis an den oberen Treppenlauf (Austritt Galerie bleibt offen)",
+   "quelle": "Murat 04.11.2026"
   }
  ],
  "oeffnungen": [
