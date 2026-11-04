@@ -991,9 +991,9 @@
    "typ": "pfette",
    "pos_x": 3.89,
    "richtung": "Nord-Süd",
-   "unterkante_z": 5.0,
-   "quelle": "Murat 04.11.: ca. 5 m",
-   "hinweis": "Pendel Esstisch hängt darunter"
+   "unterkante_z": 6.65,
+   "quelle": "Fotos Murat 04.11.2026 (IMG_7051): Firstpfette direkt im First",
+   "hinweis": "Firstpfette; UK rechnerisch ca. 6,65 m (First innen 7,04 m − Sparren − Pfette). Pendel und Stromschiene hängen darunter."
   },
   {
    "id": "bad-dusche",
@@ -2106,11 +2106,7 @@
      0,
      3.978
     ],
-    "z": [
-     2.81,
-     5.0
-    ],
-    "bis": "bis an Pfette/Dach",
+    "bis": "bis unter das Dach",
     "material": "Sichtholz",
     "farbe": "Fichte natur, Dreischichtplatte (wie Balken)",
     "quelle": "Murat 04.11.: Wand Wohnzimmer Richtung Schlaf-/Kinderzimmer bis ganz hoch an die Pfette",
@@ -2125,11 +2121,7 @@
      0,
      5.34
     ],
-    "z": [
-     2.81,
-     5.0
-    ],
-    "bis": "bis Dach",
+    "bis": "bis unter das Dach",
     "material": "Sichtholz",
     "farbe": "Fichte natur, Dreischichtplatte (wie Balken)",
     "quelle": "Murat 04.11.: Wand zwischen Empore und Kinderzimmer",

@@ -278,12 +278,6 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
     m.setdefault("bibliothek", standard_bibliothek())
     m.setdefault("einstellungen", {"breitengrad": 49.654, "laengengrad": 9.077, "datum": "2026-06-21",
                                    "uhrzeit": "17:00", "szenario": "aus", "belichtung": 1.0})
-    if not any("Pfette" in str(q) for q in m["offene_fragen"]):
-        m["offene_fragen"].append("Pfette: Unterkante ca. 5,0 m (Murat) – rechnerische Firsthöhe innen ca. 7,04 m. "
-                                  "Ist das eine Mittelpfette/Zange oder die Firstpfette? Höhe prüfen.")
-    if not any("Kinderzimmer" in str(q) and "Decke" in str(q) for q in m["offene_fragen"]):
-        m["offene_fragen"].append("Kinderzimmer: Decke auf Höhe Pfettenunterkante (5,0 m) angenommen – oder offen bis "
-                                  "unter den First?")
     return m
 
 

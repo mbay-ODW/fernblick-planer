@@ -189,8 +189,11 @@ export function wandInfos(m: any, M: Masse): WandInfo[] {
       // Giebel bis unter das Dach
       oben = (u) => (Math.abs(ux) > 0.5 ? dachInnen(M, xAt(u)) : M.traufe);
     } else {
-      // Innenwand OG: bis Dach bzw. höchstens Pfettenunterkante
-      oben = (u) => Math.min(dachInnen(M, xAt(u)), M.pfetteUK);
+      // Innenwand OG: bis unter das Dach, direkt unter der Pfette bis zu deren Unterkante
+      oben = (u) => {
+        const x = xAt(u);
+        return Math.abs(x - M.firstX) < 0.12 ? Math.min(dachInnen(M, x), M.pfetteUK) : dachInnen(M, x);
+      };
     }
     out.push({
       id: w.id, geschoss: w.geschoss, typ: w.typ, a: [ax, ay], b: [bx, by], ux, uy, nx, ny, dicke: d, laenge: L,
@@ -944,17 +947,6 @@ export function hausBauen(m: any): HausErgebnis {
   const ogBoden = flaeche(ogPoly, M.ogZ, mat("#c8a274", "parkett", { name: "Parkett Eiche" }));
   ogBoden.userData = { art: "boden", geschoss: "OG" };
   teile.og.add(ogBoden);
-
-  // Kinderzimmer: Decke auf Höhe Pfettenunterkante (Annahme)
-  if (kinder) {
-    const xk = Math.max(...kinder.polygon.map((p: P2) => p[0])) + 0.0875;
-    const xs = (M.pfetteUK - M.traufe) / M.tan;
-    if (xs < xk) {
-      const km = flaeche([[xs, 0], [xk, 0], [xk, lochY0 - 0.0875], [xs, lochY0 - 0.0875]], M.pfetteUK, mat("#f1efea", "putz", { name: "Decke Kinderzimmer" }), false);
-      km.userData = { art: "decke" };
-      teile.dach.add(km);
-    }
-  }
 
   // Südgiebel verglast über dem EG
   {
