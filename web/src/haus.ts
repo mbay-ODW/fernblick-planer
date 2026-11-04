@@ -455,7 +455,7 @@ function oberflaechenAnwenden(m: any, waende: WandInfo[], gruppe: THREE.Group, w
 // ---------------------------------------------------------------------------
 // Öffnungen ausstatten (Rahmen, Glas, Türblätter)
 // ---------------------------------------------------------------------------
-function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number) {
+function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number, m: any) {
   const rahmen = mat(ZARGE, "metall", { name: "Rahmen" });
   const glas = mat("#ffffff", "glas");
   const weiss = mat("#f4f2ee", "glatt", { name: "Zarge" });
@@ -514,8 +514,16 @@ function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number) {
         const c = (pb[1][0] - w.a[0]) * w.ux + (pb[1][1] - w.a[1]) * w.uy;
         uP = (a + c) / 2;
       }
-      mk(b + 0.06, h + 0.02, 0.04, mat("#f4f2ee", "glatt", { name: "Schiebetür" }), uP, zc + 0.01, w.dicke / 2 + 0.04);
-      mk(b * 2 + 0.2, 0.04, 0.05, rahmen, (uc + uP) / 2, o.z1 + 0.04, w.dicke / 2 + 0.04);
+      // Parkseite: Raum, der in „parkseite“ genannt ist (z. B. „Galerie“), sonst Normalenseite
+      let ps = 1;
+      const txt = String(o.daten.parkseite ?? "").toLowerCase();
+      const raum = (m.raeume ?? []).find((r: any) => txt && (txt.includes(String(r.id).toLowerCase()) || txt.includes(String(r.name).toLowerCase())));
+      if (raum) {
+        const c = raum.polygon.reduce((acc: P2, q: P2) => [acc[0] + q[0] / raum.polygon.length, acc[1] + q[1] / raum.polygon.length], [0, 0]);
+        ps = (c[0] - w.a[0]) * w.nx + (c[1] - w.a[1]) * w.ny >= 0 ? 1 : -1;
+      }
+      mk(b + 0.06, h + 0.02, 0.04, mat("#f4f2ee", "glatt", { name: "Schiebetür" }), uP, zc + 0.01, ps * (w.dicke / 2 + 0.04));
+      mk(b * 2 + 0.2, 0.04, 0.05, rahmen, (uc + uP) / 2, o.z1 + 0.04, ps * (w.dicke / 2 + 0.04));
     }
   }
 }
@@ -712,8 +720,11 @@ function gelaenderBauen(m: any, M: Masse, weg: TreppenWeg, ziele: Record<string,
         if (k === 0 && i > 0) continue;
         const t = k / nP;
         const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, z = za + (zb - za) * t;
-        const unten = treppe ? Math.max(0, z - 0.32) : basis;
-        balken(v3(x, y, unten), v3(x, y, z + hoehe - 0.02), [0.04, 0.04], stahl);
+        let unten = treppe ? Math.max(0, z - 0.32) : basis;
+        let oben = z + hoehe - 0.02;
+        // Antrittspfosten jedes Treppengeländers steht auf dem Boden (oberer Lauf: Pfosten am Wendel)
+        if (treppe && i === 0 && k === 0) unten = 0;
+        balken(v3(x, y, unten), v3(x, y, oben), [0.04, 0.04], stahl);
       }
       // Kollision stückweise (Neigung)
       const teile = Math.max(1, Math.ceil(L / 0.25));
@@ -875,7 +886,7 @@ export function hausBauen(m: any): HausErgebnis {
     ziel.add(me);
     wandMeshes.push(me);
     const innenSeite = (M.W / 2 - w.a[0]) * w.nx + (M.L / 2 - w.a[1]) * w.ny >= 0 ? 1 : -1;
-    oeffnungenAusstatten(w, ziel, innenSeite);
+    oeffnungenAusstatten(w, ziel, innenSeite, m);
     // Kollision: Wand ohne begehbare Öffnungen
     const luecken = w.oeffnungen
       .filter((o) => ["tuer", "schiebetuer", "durchgang"].includes(o.typ) || o.daten.oeffnung)

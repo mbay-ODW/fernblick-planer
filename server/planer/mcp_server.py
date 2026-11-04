@@ -263,7 +263,7 @@ def leuchten_setzen(leuchten: list[dict[str, Any]], notiz: str = "") -> dict[str
     Linienleuchten (stromschiene, led_streifen) statt pos über einen Verlauf: an="pfette" mit bereich [y von, y bis];
     oder wand=<Wand-ID> + seite (Nord/Ost/Süd/West) entlang der Wandoberkante (folgt der Dachschräge), abstand_oben,
     abstand_wand, bereich [u von, u bis]; oder pfad [[x, y, z], …]. stromschiene: anzahl Spots, abstrahlwinkel (Grad),
-    neigung (0 = senkrecht nach unten, ~0,7 = schräg in den Raum)."""
+    neigung (0 = senkrecht, ~0,7 = schräg), ausrichtung ("unten" Standard, "oben" = indirekt ins Gebälk)."""
     def f(m: dict[str, Any]) -> None:
         _upsert(m["leuchten"], leuchten, "id", "l", ersetzen=False)
     return _aendern(f, notiz or f"MCP: {len(leuchten)} Leuchten")

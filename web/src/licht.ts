@@ -219,7 +219,12 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = []): { grup
           const q = an(((i + 0.5) / n) * gesamt).add(new THREE.Vector3(0, -0.07, 0));
           // Ausrichtung: in den Raum geneigt (Wand) bzw. abwechselnd zu beiden Seiten (Pfette)
           const dir = new THREE.Vector3(0, -1, 0);
-          if (raum) dir.addScaledVector(raum, le.neigung ?? 0.7);
+          if (le.ausrichtung === "oben") {
+            // indirekt: nach oben ins Gebälk, abwechselnd auf beide Dachseiten (bzw. von der Wand weg schräg nach oben)
+            dir.set(0, 1, 0);
+            if (raum) dir.addScaledVector(raum, le.neigung ?? 1.4);
+            else dir.x += (i % 2 ? 1 : -1) * (le.neigung ?? 1.4);
+          } else if (raum) dir.addScaledVector(raum, le.neigung ?? 0.7);
           else dir.x += (i % 2 ? 1 : -1) * (le.neigung ?? 0.35);
           dir.normalize();
           const kopf = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.09, 16), schwarz);
@@ -237,7 +242,7 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = []): { grup
           sp.target.position.copy(q).addScaledVector(dir, 3);
           sp.shadow.mapSize.set(1024, 1024);
           sp.shadow.bias = -0.0008;
-          sp.userData = { spot: true, anteil: 1 / n };
+          sp.userData = { spot: true, anteil: 1 / n, keinSchatten: le.ausrichtung === "oben" };
           g.add(sp, sp.target);
           lichter.push(sp);
         }
@@ -309,7 +314,7 @@ export function leuchteSetzen(e: LeuchteEintrag, dimm: number, schatten: boolean
       const sp = l as THREE.SpotLight;
       const omega = 2 * Math.PI * (1 - Math.cos(sp.angle));
       sp.intensity = (lm / omega) * LICHT_K * 4;
-      sp.castShadow = schatten && dimm > 0;
+      sp.castShadow = schatten && dimm > 0 && !sp.userData.keinSchatten;
     } else {
       l.intensity = (lm / (4 * Math.PI)) * LICHT_K * 4;
       l.castShadow = false;

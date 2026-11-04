@@ -746,8 +746,8 @@
      4.85
     ]
    ],
-   "parkseite": "Galerie (Annahme)",
-   "quelle": "Murat 04.11."
+   "parkseite": "Galerie",
+   "quelle": "Murat 04.11.2026 (Schiebetür sitzt auf der Galerieseite)"
   }
  ],
  "feste_elemente": [
@@ -2029,9 +2029,10 @@
    "anzahl": 6,
    "lumen": 2400,
    "kelvin": 2700,
-   "abstrahlwinkel": 36,
-   "hinweis": "schwarze Schiene unter der Pfette, Spots in den Wohn-/Essbereich",
-   "quelle": "Murat 04.11.2026 (Foto IMG_7051)"
+   "abstrahlwinkel": 60,
+   "hinweis": "schwarze Schiene unter der Pfette, Spots nach oben ins Gebälk (indirekt)",
+   "quelle": "Murat 04.11.2026 (Foto IMG_7051)",
+   "ausrichtung": "oben"
   },
   {
    "id": "schiene-galerie",
@@ -2063,6 +2064,22 @@
    "kelvin": 2700,
    "hinweis": "LED-Streifen in der Fuge Wand/Dachschräge, streift die Holzwand Wohnzimmer/Kinderzimmer",
    "quelle": "Murat 04.11.2026 (Foto IMG_7239)"
+  },
+  {
+   "id": "schiene-kinder",
+   "typ": "stromschiene",
+   "name": "Stromschiene Kinderzimmer",
+   "geschoss": "OG",
+   "raum": "kinder",
+   "wand": "OG-IW-kinder-ost",
+   "seite": "West",
+   "abstand_oben": 0.1,
+   "anzahl": 5,
+   "lumen": 2000,
+   "kelvin": 2700,
+   "neigung": 0.8,
+   "hinweis": "Schiene oben an der Holzwand zur Galerie (Kinderzimmerseite), analog Empore",
+   "quelle": "Murat 04.11.2026"
   }
  ],
  "offene_fragen": [
