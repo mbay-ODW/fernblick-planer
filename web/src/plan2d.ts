@@ -58,6 +58,14 @@ export class Plan {
   private waende: WandInfo[] = [];
   private M!: Masse;
   pinsel = false;
+  /** Messen: Strecken [A, B] (bleiben bis Esc), laufender Startpunkt und Zeiger */
+  messen = false;
+  messungen: [P2, P2][] = [];
+  private messStart: P2 | null = null;
+  private messZeiger: P2 | null = null;
+  private messG: Element | null = null;
+  private fangEcken: P2[] = [];
+  private fangKanten: [P2, P2][] = [];
   private ziehen: any = null;
   private zeiger = new Map<number, { x: number; y: number }>();
   private eingepasst = false;
@@ -296,6 +304,32 @@ export class Plan {
     const sel = liste.find((x: any) => x.id === this.auswahl);
     if (sel) this.masseZeichnen(sel, svg);
 
+    // Fangpunkte fürs Messen: Wand-, Raum-, Möbel- und Einbauecken samt Kanten
+    this.fangEcken = [];
+    this.fangKanten = [];
+    const fang = (poly: P2[]) => {
+      if (!poly?.length) return;
+      for (let i = 0; i < poly.length; i++) {
+        this.fangEcken.push(poly[i]);
+        this.fangKanten.push([poly[i], poly[(i + 1) % poly.length]]);
+      }
+    };
+    for (const w of this.waende.filter((w) => w.geschoss === ge)) {
+      if (w.typ === "glasbruestung") { this.fangEcken.push(w.a, w.b); this.fangKanten.push([w.a, w.b]); continue; }
+      fang(wandPoly(w));
+      for (const o of w.oeffnungen) for (const u of [o.u0, o.u1]) for (const s of [-1, 1])
+        this.fangEcken.push([w.a[0] + w.ux * u + w.nx * s * w.dicke / 2, w.a[1] + w.uy * u + w.ny * s * w.dicke / 2]);
+    }
+    for (const r of m.raeume.filter((r: any) => r.geschoss === ge)) fang(r.polygon);
+    for (const x of liste) fang(ecken(x));
+    for (const f of m.feste_elemente ?? []) {
+      if ((f.geschoss ?? "EG") !== ge || !Array.isArray(f.rechteck)) continue;
+      const [[x0, y0], [x1, y1]] = f.rechteck;
+      fang([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
+    }
+    this.messG = el("g", { class: "messen" }, svg);
+    this.messZeichnen();
+
     // Nordpfeil und Maßstab
     const n = el("g", { class: "nord", transform: `translate(${M.W + 1.0}, -0.6)` }, svg);
     el("path", { d: "M 0 -0.35 L 0.14 0.15 L 0 0.06 L -0.14 0.15 Z" }, n);
@@ -368,6 +402,84 @@ export class Plan {
     ziehe([cx, box.y0], [0, -1]);
   }
 
+  /** Punkt einfangen: Ecke vor Kante (Toleranz ~14 px); Alt = frei; Umschalt = waagrecht/senkrecht zum Start. */
+  private fangen(p: P2, e: { altKey: boolean; shiftKey: boolean }): { p: P2; art: "ecke" | "kante" | "frei" } {
+    let q: P2 = p;
+    if (e.shiftKey && this.messStart) {
+      const [sx, sy] = this.messStart;
+      q = Math.abs(p[0] - sx) >= Math.abs(p[1] - sy) ? [p[0], sy] : [sx, p[1]];
+    }
+    if (e.altKey) return { p: q, art: "frei" };
+    const r = (this.ansicht.w / Math.max(1, this.svg.getBoundingClientRect().width)) * 14;
+    let best: P2 | null = null, bd = r;
+    for (const c of this.fangEcken) {
+      const d = Math.hypot(c[0] - q[0], c[1] - q[1]);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (best) {
+      // beim Gerade-Messen nur die freie Achse übernehmen
+      if (e.shiftKey && this.messStart) return { p: q[1] === this.messStart[1] ? [best[0], q[1]] : [q[0], best[1]], art: "ecke" };
+      return { p: [best[0], best[1]], art: "ecke" };
+    }
+    bd = r;
+    for (const [a, b] of this.fangKanten) {
+      const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy || 1e-9;
+      const t = Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / l));
+      const c: P2 = [a[0] + t * dx, a[1] + t * dy];
+      const d = Math.hypot(c[0] - q[0], c[1] - q[1]);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (best && !(e.shiftKey && this.messStart)) return { p: best, art: "kante" };
+    return { p: q, art: "frei" };
+  }
+
+  private messKlick(e: { clientX: number; clientY: number; altKey: boolean; shiftKey: boolean }) {
+    const { p } = this.fangen(this.nachModell(e), e);
+    if (!this.messStart) this.messStart = p;
+    else {
+      this.messungen.push([this.messStart, p]);
+      this.messStart = null;
+    }
+    this.messZeichnen();
+  }
+
+  /** Messungen löschen bzw. laufende abbrechen; true, wenn etwas zu tun war. */
+  messAbbrechen(): boolean {
+    if (this.messStart) { this.messStart = null; this.messZeichnen(); return true; }
+    if (this.messungen.length) { this.messungen = []; this.messZeichnen(); return true; }
+    return false;
+  }
+
+  private messZeichnen() {
+    const g = this.messG;
+    if (!g) return;
+    while (g.firstChild) g.removeChild(g.firstChild);
+    const k = this.ansicht.w / Math.max(1, this.svg.getBoundingClientRect().width); // m je Pixel
+    const fmt = (v: number) => v.toFixed(2).replace(".", ",");
+    const strecke = (a: P2, b: P2, laufend: boolean) => {
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const sg = el("g", { class: "strecke" + (laufend ? " laufend" : "") }, g);
+      el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], "stroke-width": 2 * k }, sg);
+      if (L > 1e-6) {
+        const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, t = 6 * k;
+        for (const p of [a, b]) el("line", { x1: p[0] - nx * t, y1: p[1] - ny * t, x2: p[0] + nx * t, y2: p[1] + ny * t, "stroke-width": 2 * k }, sg);
+      }
+      const dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]);
+      const txt = `${fmt(L)} m` + (dx > 0.02 && dy > 0.02 ? `  (↔ ${fmt(dx)} · ↕ ${fmt(dy)})` : "");
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 8 * k;
+      const fs = 13 * k;
+      const breite = txt.length * fs * 0.6;
+      el("rect", { x: mx - breite / 2 - 3 * k, y: my - fs, width: breite + 6 * k, height: fs * 1.35, rx: 3 * k, class: "messfeld" }, sg);
+      el("text", { x: mx, y: my, "font-size": fs, class: "messtext" }, sg).textContent = txt;
+    };
+    for (const [a, b] of this.messungen) strecke(a, b, false);
+    if (this.messStart) {
+      el("circle", { cx: this.messStart[0], cy: this.messStart[1], r: 4 * k, class: "messpunkt" }, g);
+      if (this.messZeiger) strecke(this.messStart, this.messZeiger, true);
+    }
+    if (this.messen && this.messZeiger) el("circle", { cx: this.messZeiger[0], cy: this.messZeiger[1], r: 4 * k, class: "messpunkt zeiger" }, g);
+  }
+
   // ---------------------------------------------------------------------------
   private ereignisse() {
     const svg = this.svg;
@@ -390,6 +502,10 @@ export class Plan {
       if (dreh) {
         const x = this.modell.moebel.find((y: any) => y.id === dreh);
         this.ziehen = { art: "drehen", id: dreh, x };
+        return;
+      }
+      if (this.messen) {
+        this.ziehen = { art: "pan", start: [e.clientX, e.clientY], ansicht: { ...this.ansicht }, bewegt: false, messen: true };
         return;
       }
       const stueck = ziel.closest?.(".stueck") as Element | null;
@@ -431,6 +547,10 @@ export class Plan {
       const alt = this.zeiger.get(e.pointerId);
       if (alt) this.zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const z = this.ziehen;
+      if (this.messen && (!z || (z.art === "pan" && !z.bewegt))) {
+        this.messZeiger = this.fangen(this.nachModell(e), e).p;
+        this.messZeichnen();
+      }
       if (!z) return;
       if (z.art === "pinch" && this.zeiger.size === 2 && alt) {
         const [a, b] = [...this.zeiger.values()];
@@ -493,7 +613,10 @@ export class Plan {
       if (!z) return;
       if ((z.art === "moebel" || z.art === "drehen") && z.aktiv) this.rueck.fertig(z.id, z.x.pos, z.x.rot_grad ?? 0);
       if (z.art === "bauteil" && z.aktiv) this.rueck.bauteilFertig(z.b);
-      if (z.art === "pan" && !z.bewegt) this.rueck.auswahl(null);
+      if (z.art === "pan" && !z.bewegt) {
+        if (z.messen) this.messKlick(e);
+        else this.rueck.auswahl(null);
+      }
     };
     svg.addEventListener("pointerup", ende);
     svg.addEventListener("pointercancel", ende);
@@ -508,6 +631,7 @@ export class Plan {
     a.w = nw;
     a.h *= k;
     this.svg.setAttribute("viewBox", `${a.x} ${a.y} ${a.w} ${a.h}`);
+    this.messZeichnen();
   }
 
   async alsPng(): Promise<Blob> {

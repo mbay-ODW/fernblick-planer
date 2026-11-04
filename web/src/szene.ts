@@ -49,6 +49,12 @@ export class Szene {
   geschoss: Geschossfilter = "alle";
   dachZeigen = false;
   pinsel = false;
+  /** Messen in 3D: zwei Klicks auf Oberflächen; rastet an Ecken der getroffenen Fläche ein (Alt = frei). */
+  messen = false;
+  private messStart: THREE.Vector3 | null = null;
+  private messGruppe = new THREE.Group();
+  private messLabels: { el: HTMLElement; p: THREE.Vector3 }[] = [];
+  private messKlickStart: { x: number; y: number } | null = null;
   auswahlId: string | null = null;
   private moebelGruppe = new THREE.Group();
   private moebelObj = new Map<string, THREE.Group>();
@@ -304,6 +310,86 @@ export class Szene {
     this.kamera.position.copy(ziel).add(ab);
   }
 
+  private messPunkt(e: PointerEvent): THREE.Vector3 | null {
+    const t = this.treffer(e)[0];
+    if (!t) return null;
+    const p = t.point.clone();
+    if (e.altKey || !t.face) return p;
+    // Ecke der getroffenen Fläche, wenn auf dem Bildschirm näher als 14 px
+    const pos = (t.object as THREE.Mesh).geometry?.getAttribute?.("position");
+    if (!pos) return p;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const bild = (v: THREE.Vector3) => { const q = v.clone().project(this.kamera); return new THREE.Vector2((q.x + 1) / 2 * r.width, (1 - q.y) / 2 * r.height); };
+    const maus = new THREE.Vector2(e.clientX - r.left, e.clientY - r.top);
+    let best: THREE.Vector3 | null = null, bd = 14;
+    for (const i of [t.face.a, t.face.b, t.face.c]) {
+      const v = new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(t.object.matrixWorld);
+      const d = bild(v).distanceTo(maus);
+      if (d < bd) { bd = d; best = v; }
+    }
+    return best ?? p;
+  }
+
+  private messKlick(e: PointerEvent) {
+    const p = this.messPunkt(e);
+    if (!p) return;
+    if (!this.messGruppe.parent) this.szene.add(this.messGruppe);
+    const punkt = (v: THREE.Vector3) => {
+      const k = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), new THREE.MeshBasicMaterial({ color: 0xd1495b, depthTest: false }));
+      k.position.copy(v);
+      k.renderOrder = 1000;
+      k.userData.helfer = true;
+      this.messGruppe.add(k);
+    };
+    punkt(p);
+    if (!this.messStart) {
+      this.messStart = p;
+    } else {
+      const a = this.messStart, b = p;
+      const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
+      const linie = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xd1495b, depthTest: false }));
+      linie.renderOrder = 1000;
+      linie.userData.helfer = true;
+      this.messGruppe.add(linie);
+      const fmt = (v: number) => v.toFixed(2).replace(".", ",");
+      // Modell: x = Osten, three z = Süden, three y = Höhe
+      const L = a.distanceTo(b), waag = Math.hypot(b.x - a.x, b.z - a.z), hoch = Math.abs(b.y - a.y);
+      const lab = document.createElement("div");
+      lab.className = "messlabel";
+      lab.textContent = `${fmt(L)} m` + (waag > 0.02 && hoch > 0.02 ? `  (↔ ${fmt(waag)} · ↕ ${fmt(hoch)})` : "");
+      this.behaelter.appendChild(lab);
+      this.messLabels.push({ el: lab, p: a.clone().add(b).multiplyScalar(0.5) });
+      this.messStart = null;
+    }
+    this.neu();
+  }
+
+  /** Laufende Messung abbrechen bzw. alle löschen; true, wenn etwas zu tun war. */
+  messAbbrechen(): boolean {
+    const da = this.messGruppe.children.length > 0;
+    for (const c of [...this.messGruppe.children]) {
+      this.messGruppe.remove(c);
+      ((c as THREE.Mesh).geometry as THREE.BufferGeometry)?.dispose();
+    }
+    for (const l of this.messLabels) l.el.remove();
+    this.messLabels = [];
+    this.messStart = null;
+    this.neu();
+    return da;
+  }
+
+  private messLabelsSetzen() {
+    if (!this.messLabels.length) return;
+    const r = this.renderer.domElement.getBoundingClientRect(), b = this.behaelter.getBoundingClientRect();
+    for (const l of this.messLabels) {
+      const q = l.p.clone().project(this.kamera);
+      const sichtbar = q.z < 1 && this.aktiv;
+      l.el.style.display = sichtbar ? "" : "none";
+      l.el.style.left = `${r.left - b.left + (q.x + 1) / 2 * r.width}px`;
+      l.el.style.top = `${r.top - b.top + (1 - q.y) / 2 * r.height}px`;
+    }
+  }
+
   private treffer(e: PointerEvent | MouseEvent, ziele?: THREE.Object3D[]) {
     const r = this.renderer.domElement.getBoundingClientRect();
     const p = this.modus === "begehen" && document.pointerLockElement
@@ -329,6 +415,7 @@ export class Szene {
       el.focus();
       if (!this.haus) return;
       const t = this.treffer(e)[0];
+      if (this.messen && e.button === 0 && !document.pointerLockElement) this.messKlickStart = { x: e.clientX, y: e.clientY };
       if (this.modus === "begehen") {
         this.blickZiehen = { x: e.clientX, y: e.clientY };
         (this.blickZiehen as any).zeit = performance.now();
@@ -336,6 +423,7 @@ export class Szene {
         return;
       }
       if (e.button !== 0) return;
+      if (this.messen) return;
       const mid = t?.object.userData.moebelId;
       if (this.pinsel && t) {
         this.pinselTreffer(t);
@@ -414,6 +502,15 @@ export class Szene {
       this.neu();
     });
     el.addEventListener("pointerup", (e) => {
+      if (this.messKlickStart) {
+        const s = this.messKlickStart;
+        this.messKlickStart = null;
+        if (Math.hypot(e.clientX - s.x, e.clientY - s.y) < 4) {
+          this.blickZiehen = null;
+          this.messKlick(e);
+          return;
+        }
+      }
       if (this.modus === "begehen" && this.blickZiehen) {
         const b = this.blickZiehen as any;
         const kurz = performance.now() - b.zeit < 300 && Math.hypot(e.clientX - b.x, e.clientY - b.y) < 5;
@@ -688,6 +785,7 @@ export class Szene {
     if (this.bedarf <= 0) return;
     this.bedarf--;
     this.renderer.render(this.szene, this.kamera);
+    this.messLabelsSetzen();
   }
 
   async bildschirmfoto(breite?: number, hoehe?: number): Promise<Blob> {

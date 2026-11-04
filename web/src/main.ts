@@ -464,6 +464,9 @@ class App {
   hilfe() {
     const t = document.getElementById("hilfe")!;
     if (this.pinsel.aktiv) t.textContent = "Pinsel aktiv: Wandseite oder Boden anklicken · Esc beendet";
+    else if (this.messen) t.textContent = this.modus === "2d"
+      ? "Messen: Anfangs- und Endpunkt anklicken · rastet an Ecken/Kanten ein (Alt = frei, Umschalt = waagrecht/senkrecht) · ziehen = verschieben · Esc löscht/beendet"
+      : "Messen: zwei Punkte auf Flächen anklicken · rastet an Ecken ein (Alt = frei) · ziehen = drehen · Esc löscht/beendet";
     else if (this.modus === "2d") t.textContent = "Ziehen = verschieben (Alt = 1 cm) · Griff = drehen (Umschalt = frei) · R/Q/E drehen · Entf löschen · Strg+D duplizieren · Mausrad zoomt";
     else if (this.szene.modus === "begehen") t.textContent = "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Doppelklick = Maus fangen (Esc lösen) · Klick auf Boden = hingehen · Klick auf Möbel = auswählen";
     else t.textContent = "Ziehen = drehen · Rechts/zwei Finger = verschieben · Rad = zoomen · Möbel anklicken und ziehen · R/Q/E drehen";
@@ -477,7 +480,13 @@ class App {
       if (strg && e.key.toLowerCase() === "y") { e.preventDefault(); this.wiederholen(); return; }
       if (strg && e.key.toLowerCase() === "d") { e.preventDefault(); this.duplizieren(); return; }
       if (strg && e.key.toLowerCase() === "s") { e.preventDefault(); this.speichern(); return; }
+      if (!strg && e.key.toLowerCase() === "m" && !(this.modus === "3d" && this.szene.modus === "begehen")) { this.messenSetzen(!this.messen); return; }
       if (e.key === "Escape") {
+        if (this.messen) {
+          const etwas = this.modus === "2d" ? this.plan.messAbbrechen() : this.szene.messAbbrechen();
+          if (!etwas) this.messenSetzen(false);
+          return;
+        }
         if (this.pinsel.aktiv) this.pinselSetzen(false);
         else this.waehlen(null);
         return;
@@ -532,6 +541,7 @@ class App {
     document.getElementById("rueck")!.onclick = () => this.rueckgaengig();
     document.getElementById("vor")!.onclick = () => this.wiederholen();
     document.getElementById("foto")!.onclick = () => this.screenshot();
+    document.getElementById("messenKnopf")!.onclick = () => this.messenSetzen(!this.messen);
     document.getElementById("seiteSchalter")!.onclick = () => document.getElementById("app")!.classList.toggle("ohneSeite");
     document.getElementById("tabs")!.addEventListener("click", (e) => {
       const t = (e.target as HTMLElement).closest("button")?.dataset.tab;
@@ -563,6 +573,24 @@ class App {
     const e = this.modell.einstellungen ?? {};
     const sz = (this.modell.szenarien ?? []).find((s: any) => s.id === e.szenario);
     return `${e.datum ?? ""} ${e.uhrzeit ?? ""}${sz ? " · " + sz.name : ""}`;
+  }
+
+  messen = false;
+  /** Messwerkzeug (Plan und 3D): Klick, Klick = Strecke; aus = Messungen löschen. */
+  messenSetzen(an: boolean) {
+    if (an && this.pinsel.aktiv) this.pinselSetzen(false);
+    this.messen = an;
+    this.szene.messen = an;
+    this.plan.messen = an;
+    if (!an) {
+      this.szene.messAbbrechen();
+      this.plan.messungen = [];
+      this.plan.messAbbrechen();
+    }
+    if (an) this.waehlen(null);
+    document.getElementById("buehne")!.classList.toggle("messen", an);
+    document.getElementById("messenKnopf")!.classList.toggle("an", an);
+    this.hilfe();
   }
 
   pinselSetzen(an: boolean) {

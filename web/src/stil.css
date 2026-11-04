@@ -243,3 +243,16 @@ details.schiene .zeile.spot select { min-width: 0; width: 82px; }
 .boden strong { font-size: 12px; font-weight: 600; flex: 1; }
 .boden select { font-size: 12px; padding: 3px 5px; }
 .boden .zeile { flex-wrap: wrap; }
+
+/* Messen */
+#buehne.messen .plan, #buehne.messen #ansicht3d canvas { cursor: crosshair; }
+#messenKnopf.an { background: var(--gelb); border-color: var(--gelb); color: #222; }
+.plan .messen line { stroke: #d1495b; stroke-linecap: round; }
+.plan .messen .strecke.laufend line { stroke-dasharray: 0.05 0.04; }
+.plan .messen .messfeld { fill: rgba(255,255,255,.92); stroke: #d1495b; stroke-width: .004; }
+.plan .messen .messtext { fill: #b0303f; text-anchor: middle; font-weight: 600; dominant-baseline: auto; }
+.plan .messen .messpunkt { fill: #d1495b; }
+.plan .messen .messpunkt.zeiger { fill: none; stroke: #d1495b; stroke-width: .01; }
+.messlabel { position: absolute; transform: translate(-50%, -130%); background: rgba(255,255,255,.94); color: #b0303f; border: 1px solid #d1495b;
+  border-radius: 4px; padding: 1px 6px; font: 600 12px/1.4 system-ui, sans-serif; white-space: nowrap; pointer-events: none; z-index: 5; }
+#buehne:not([data-modus="3d"]) .messlabel { display: none !important; }
