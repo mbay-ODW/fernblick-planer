@@ -551,18 +551,37 @@ function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number, m: any
   }
 }
 
+/**
+ * Lamellenwand: lamellen = { anzahl, breite (entlang der Wand), tiefe, abstand (lichte Weite) }.
+ * Mit anzahl ergibt sich die Länge = anzahl·breite + (anzahl−1)·abstand ab Wandanfang;
+ * ohne anzahl wird die Wandlänge mittig mit so vielen Lamellen gefüllt, wie hineinpassen.
+ */
+export function lamellenMasse(d: any, laenge: number) {
+  const L = d?.lamellen ?? {};
+  const b = Math.max(0.005, L.breite ?? 0.04), t = Math.max(0.005, L.tiefe ?? 0.06), a = Math.max(0, L.abstand ?? 0.06);
+  if (L.anzahl) {
+    const n = Math.max(1, Math.round(L.anzahl));
+    return { n, b, t, a, start: 0, laenge: n * b + (n - 1) * a };
+  }
+  const n = Math.max(1, Math.floor((laenge + a) / (b + a)));
+  const genutzt = n * b + (n - 1) * a;
+  return { n, b, t, a, start: (laenge - genutzt) / 2, laenge: genutzt };
+}
+
 function lamellen(w: WandInfo, g: THREE.Group, koll: KollSeg[]) {
-  const m = mat(EICHE, "holz", { name: "Lamellen Eiche" });
+  const d = w.daten ?? {};
+  const m = mat(d.farbe_hex ?? EICHE, "holz", { name: "Lamellen Eiche" });
   const h = w.oben(0) - w.z0;
   const M = wandMatrix(w);
-  const n = Math.floor(w.laenge / 0.1);
+  const lm = lamellenMasse(d, w.laenge);
   const geos: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < n; i++) {
-    const geo = new THREE.BoxGeometry(0.04, h, 0.06);
-    geo.translate(0.05 + i * 0.1, w.z0 + h / 2, 0);
+  for (let i = 0; i < lm.n; i++) {
+    const geo = new THREE.BoxGeometry(lm.b, h, lm.t);
+    geo.translate(lm.start + lm.b / 2 + i * (lm.b + lm.a), w.z0 + h / 2, 0);
     geos.push(geo);
   }
   const inst = new THREE.Mesh(mergeGeometries(geos), m);
+  inst.userData = { lamellen: w.id };
   inst.applyMatrix4(M);
   inst.castShadow = true;
   inst.receiveShadow = true;

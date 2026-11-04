@@ -21,7 +21,7 @@ export interface SzenenRueckrufe {
 
 /** Feste Einbauten (Küche, Bad, Geländer …) und Wand-Teilflächen (z. B. Aluverbundplatte) */
 export interface Bauteil {
-  art: "fest" | "flaeche";
+  art: "fest" | "flaeche" | "wand";
   id: string;
 }
 
@@ -263,6 +263,7 @@ export class Szene {
     let x: THREE.Object3D | null = o;
     while (x) {
       if (x.userData.flaeche) return { b: { art: "flaeche", id: x.userData.flaeche }, obj: x };
+      if (x.userData.lamellen) return { b: { art: "wand", id: x.userData.lamellen }, obj: x };
       if (x.userData.art === "fest" && x.userData.id) return { b: { art: "fest", id: x.userData.id }, obj: x };
       x = x.parent;
     }
@@ -281,7 +282,7 @@ export class Szene {
     if (!ziel)
       this.haus.gruppe.traverse((o) => {
         if (ziel) return;
-        if ((b.art === "flaeche" && o.userData.flaeche === b.id) || (b.art === "fest" && o.userData.art === "fest" && o.userData.id === b.id)) ziel = o;
+        if ((b.art === "flaeche" && o.userData.flaeche === b.id) || (b.art === "wand" && o.userData.lamellen === b.id) || (b.art === "fest" && o.userData.art === "fest" && o.userData.id === b.id)) ziel = o;
       });
     if (!ziel) return;
     const box = new THREE.Box3().setFromObject(ziel).expandByScalar(0.02);

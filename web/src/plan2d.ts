@@ -1,5 +1,5 @@
 // 2D-Grundriss (SVG, Norden oben): Räume, Wände mit Öffnungen, Einbauten, Möbel zum Ziehen und Drehen, Maßketten
-import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad } from "./haus";
+import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad, lamellenMasse } from "./haus";
 import type { Bauteil } from "./szene";
 import { bauteilFinden, bauteilVerschieben, mitlaeuferKopie } from "./bauteile";
 import { ecken, istFlach } from "./moebel";
@@ -200,9 +200,17 @@ export class Plan {
         continue;
       }
       if (w.typ === "lamellen") {
-        const g = el("g", { class: "lamellen" }, wg);
-        for (let u = 0.05; u < w.laenge; u += 0.1)
-          el("rect", { x: w.a[0] + w.ux * u - 0.02, y: w.a[1] + w.uy * u - 0.03, width: 0.04, height: 0.06 }, g);
+        const gew = this.bauteil?.art === "wand" && this.bauteil.id === w.id;
+        const g = el("g", { class: "lamellen" + (gew ? " gewaehlt" : ""), "data-lamellen": w.id }, wg);
+        const lm = lamellenMasse(w.daten, w.laenge);
+        // Klickfläche über die ganze Wand
+        el("polygon", { points: pts([[w.a[0] + w.nx * lm.t / 2, w.a[1] + w.ny * lm.t / 2], [w.b[0] + w.nx * lm.t / 2, w.b[1] + w.ny * lm.t / 2],
+          [w.b[0] - w.nx * lm.t / 2, w.b[1] - w.ny * lm.t / 2], [w.a[0] - w.nx * lm.t / 2, w.a[1] - w.ny * lm.t / 2]]), class: "lamellen-flaeche", "data-lamellen": w.id }, g);
+        for (let i = 0; i < lm.n; i++) {
+          const u0 = lm.start + i * (lm.b + lm.a), u1 = u0 + lm.b, h = lm.t / 2;
+          const P = (u: number, s: number): P2 => [w.a[0] + w.ux * u + w.nx * s, w.a[1] + w.uy * u + w.ny * s];
+          el("polygon", { points: pts([P(u0, h), P(u1, h), P(u1, -h), P(u0, -h)]), "data-lamellen": w.id }, g);
+        }
         continue;
       }
       const p = el("polygon", { points: pts(wandPoly(w)), class: `wand ${w.typ}`, "data-wand": w.id }, wg);
@@ -386,6 +394,7 @@ export class Plan {
       const stueck = ziel.closest?.(".stueck") as Element | null;
       const flId = ziel.getAttribute?.("data-flaeche");
       const festId = ziel.getAttribute?.("data-fest");
+      const lamId = ziel.getAttribute?.("data-lamellen");
       if (this.pinsel) {
         const wand = ziel.getAttribute?.("data-wand");
         if (wand) {
@@ -398,8 +407,8 @@ export class Plan {
         if (raum) this.rueck.bodenKlick(raum);
         return;
       }
-      if (!stueck && (flId || festId)) {
-        const b: Bauteil = flId ? { art: "flaeche", id: flId } : { art: "fest", id: festId! };
+      if (!stueck && (flId || festId || lamId)) {
+        const b: Bauteil = flId ? { art: "flaeche", id: flId } : lamId ? { art: "wand", id: lamId } : { art: "fest", id: festId! };
         this.rueck.bauteil(b);
         const f = bauteilFinden(this.modell, b);
         if (!f) return;

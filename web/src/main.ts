@@ -6,7 +6,7 @@ import { Szene, Geschossfilter, Bauteil } from "./szene";
 import { bauteilFinden, bauteilVerschieben } from "./bauteile";
 import { Plan } from "./plan2d";
 import { pruefen, Hinweis } from "./pruefung";
-import { seitenName, P2 } from "./haus";
+import { seitenName, P2, lamellenMasse } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
 import { tvZoll } from "./moebel";
@@ -1082,6 +1082,39 @@ class App {
           h("label", {}, "Relingstäbe"), num(f.staebe ?? 4, (v) => setze((g) => (g.staebe = Math.max(0, Math.round(v))), `${f.id} Stäbe`), 1),
           h("label", {}, "Pfosten"), num(f.pfosten ?? 0, (v) => setze((g) => { if (v >= 2) g.pfosten = Math.round(v); else delete g.pfosten; }, `${f.id} Pfosten`), 1));
       }
+    } else if (b.art === "wand") {
+      // Lamellenwand: Anzahl, Breite, Tiefe, Abstand → Länge ab Wandanfang (Ende wird nachgezogen)
+      const laenge0 = Math.hypot(f.bis[0] - f.von[0], f.bis[1] - f.von[1]) || 1;
+      const lm = lamellenMasse(f, laenge0);
+      const lam = (neu: Record<string, number>, notiz: string) => setze((g) => {
+        const L0 = Math.hypot(g.bis[0] - g.von[0], g.bis[1] - g.von[1]) || 1;
+        const ux = (g.bis[0] - g.von[0]) / L0, uy = (g.bis[1] - g.von[1]) / L0;
+        const alt = lamellenMasse(g, L0);
+        // beim ersten Parametrieren die bisherige Lage der ersten Lamelle beibehalten
+        const r4 = (v: number) => Math.round(v * 10000) / 10000;
+        if (!g.lamellen?.anzahl && alt.start) g.von = [r4(g.von[0] + ux * alt.start), r4(g.von[1] + uy * alt.start)];
+        const p = { anzahl: alt.n, breite: alt.b, tiefe: alt.t, abstand: alt.a, ...neu };
+        p.anzahl = Math.max(1, Math.round(p.anzahl));
+        g.lamellen = { anzahl: p.anzahl, breite: r3(p.breite), tiefe: r3(p.tiefe), abstand: r3(p.abstand) };
+        const L = p.anzahl * p.breite + (p.anzahl - 1) * p.abstand;
+        g.bis = [r4(g.von[0] + ux * L), r4(g.von[1] + uy * L)];
+        g.dicke = r3(p.tiefe);
+      }, `${f.id}: ${notiz}`);
+      const cm = (v: number) => Math.round(v * 1000) / 10;
+      felder.push(
+        h("label", {}, "Anzahl Lamellen"), num(lm.n, (v) => lam({ anzahl: Math.max(1, v) }, `Anzahl ${Math.round(v)}`), 1),
+        h("label", {}, "Breite / Tiefe (cm)"), h("div", { class: "zwei" },
+          num(cm(lm.b), (v) => lam({ breite: Math.max(0.5, v) / 100 }, `Breite ${v} cm`), 0.5),
+          num(cm(lm.t), (v) => lam({ tiefe: Math.max(0.5, v) / 100 }, `Tiefe ${v} cm`), 0.5)),
+        h("label", {}, "Abstand (cm, licht)"), num(cm(lm.a), (v) => lam({ abstand: Math.max(0, v) / 100 }, `Abstand ${v} cm`), 0.5),
+        h("label", {}, "Länge gesamt (m)"), num(lm.laenge, (v) => lam({ abstand: lm.n > 1 ? Math.max(0, (v - lm.n * lm.b) / (lm.n - 1)) : 0 }, `Länge ${v} m`), 0.01),
+        h("label", {}, "Höhe (m)"), num(f.hoehe ?? 2.68, (v) => setze((g) => (g.hoehe = Math.max(0.1, v)), `${f.id}: Höhe`), 0.05),
+        h("label", {}, "Anfang x / y"), h("div", { class: "zwei" },
+          num(f.von[0], (v) => this.aendern((m) => bauteilVerschieben(m, b, v - f.von[0], 0), "haus", `${f.id} verschoben`), 0.05),
+          num(f.von[1], (v) => this.aendern((m) => bauteilVerschieben(m, b, 0, v - f.von[1]), "haus", `${f.id} verschoben`), 0.05)),
+        h("label", {}, "Farbe"), h("input", { type: "color", value: f.farbe_hex ?? "#a07a4b", onchange: (e: Event) => setze((g) => (g.farbe_hex = (e.target as HTMLInputElement).value), `${f.id}: Farbe`) }),
+        h("div", { class: "dezent", style: "grid-column: 1 / -1" }, `Länge = Anzahl × Breite + (Anzahl − 1) × Abstand = ${lm.laenge.toFixed(3).replace(".", ",")} m. Die Wand wächst/schrumpft ab dem Anfang; „Länge“ ändern verteilt den Abstand neu.`),
+      );
     } else {
       const quer = !!f.x;
       const ber = f.x ?? f.y;
@@ -1099,17 +1132,18 @@ class App {
       felder.push(h("label", {}, "Wandert mit"), h("select", { onchange: (e: Event) => setze((g) => { const v = (e.target as HTMLSelectElement).value; if (v) g.gehoert_zu = v; else delete g.gehoert_zu; }, `${f.id} gehört zu`) },
         h("option", { value: "" }, "–"), ...einbauten.map((id: string) => h("option", { value: id, selected: f.gehoert_zu === id }, id))));
     }
-    const titel = b.art === "fest" ? (f.name ?? f.id) : `${f.material ?? "Fläche"} · ${f.wand ?? ""} ${f.seite ?? ""}`;
+    const titel = b.art === "fest" ? (f.name ?? f.id) : b.art === "wand" ? (f.name ?? "Lamellenwand") : `${f.material ?? "Fläche"} · ${f.wand ?? ""} ${f.seite ?? ""}`;
     p.append(
       h("div", { class: "kopf" }, h("strong", { class: "titel" }, titel), h("button", { class: "x", onclick: () => this.bauteilWaehlen(null) }, "×")),
-      h("div", { class: "dezent" }, `${b.art === "fest" ? "Einbau" : "Wand-Teilfläche"} · ${f.id}${f.typ ? " · " + f.typ : ""}`),
+      h("div", { class: "dezent" }, `${b.art === "fest" ? "Einbau" : b.art === "wand" ? "Wand" : "Wand-Teilfläche"} · ${f.id}${f.typ ? " · " + f.typ : ""}`),
       h("div", { class: "raster2" }, ...felder),
       h("div", { class: "dezent" }, [f.hinweis, f.quelle ? `Quelle: ${f.quelle}` : ""].filter(Boolean).join(" · ")),
-      h("p", { class: "dezent" }, b.art === "fest" ? "Im Plan oder in 3D ziehen (5-cm-Raster, Alt = 1 cm), Pfeiltasten schieben." : "Im Plan oder in 3D entlang der Wand ziehen."),
+      h("p", { class: "dezent" }, b.art !== "flaeche" ? "Im Plan oder in 3D ziehen (5-cm-Raster, Alt = 1 cm), Pfeiltasten schieben." : "Im Plan oder in 3D entlang der Wand ziehen."),
       h("div", { class: "zeile" }, h("button", { class: "warn", onclick: () => {
         if (!confirm(`${titel} aus dem Modell entfernen?`)) return;
         this.aendern((m) => {
           if (b.art === "fest") m.feste_elemente = m.feste_elemente.filter((e: any) => e.id !== b.id);
+          else if (b.art === "wand") m.waende = m.waende.filter((e: any) => e.id !== b.id);
           else m.oberflaechen.flaechen = m.oberflaechen.flaechen.filter((e: any) => e.id !== b.id);
         }, "haus", `${b.id} entfernt`);
         this.bauteilWaehlen(null);

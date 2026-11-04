@@ -7,6 +7,7 @@ const PUNKTLISTEN = ["rechteck", "vorwand", "glaswand", "punkte", "parkbereich",
 export function bauteilFinden(m: any, b: Bauteil | null): any {
   if (!b) return null;
   if (b.art === "fest") return (m.feste_elemente ?? []).find((f: any) => f.id === b.id) ?? null;
+  if (b.art === "wand") return (m.waende ?? []).find((f: any) => f.id === b.id) ?? null;
   return (m.oberflaechen?.flaechen ?? []).find((f: any) => f.id === b.id) ?? null;
 }
 
@@ -25,6 +26,12 @@ export function bauteilVerschieben(m: any, b: Bauteil, dx: number, dy: number, o
   const f = bauteilFinden(m, b);
   if (!f) return;
   if (b.art === "flaeche") return flaecheVerschieben(f, orig ?? structuredClone(f), dx, dy);
+  if (b.art === "wand") {
+    const o = orig ?? structuredClone(f);
+    f.von = [r(o.von[0] + dx), r(o.von[1] + dy)];
+    f.bis = [r(o.bis[0] + dx), r(o.bis[1] + dy)];
+    return;
+  }
   festVerschieben(f, orig ?? structuredClone(f), dx, dy);
   for (const fl of m.oberflaechen?.flaechen ?? []) {
     if (fl.gehoert_zu !== b.id) continue;
