@@ -123,7 +123,7 @@ function prisma(poly: P2[], z0: number, z1: number, m: THREE.Material | THREE.Ma
   return me;
 }
 
-function himmelsrichtung(text: string | undefined): P2 | null {
+export function himmelsrichtung(text: string | undefined): P2 | null {
   const t = (text ?? "").toLowerCase();
   if (t.startsWith("süd") || t.startsWith("sued")) return [0, 1];
   if (t.startsWith("nord")) return [0, -1];
@@ -312,7 +312,7 @@ function zusammenfuegen(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
 }
 
 /** Welche Seite (plus = Normalenrichtung) einer Wand meint ein Oberflächen-Eintrag? */
-function seiteVon(f: any, w: WandInfo, m: any): "plus" | "minus" {
+export function seiteVon(f: any, w: WandInfo, m: any): "plus" | "minus" {
   const r = himmelsrichtung(f.seite);
   if (r) return r[0] * w.nx + r[1] * w.ny >= 0 ? "plus" : "minus";
   const raum = m.raeume.find((x: any) => x.id === f.raum);
@@ -322,6 +322,55 @@ function seiteVon(f: any, w: WandInfo, m: any): "plus" | "minus" {
     return (cx - w.a[0]) * w.nx + (cy - w.a[1]) * w.ny >= 0 ? "plus" : "minus";
   }
   return "plus";
+}
+
+/**
+ * Verlauf einer Linienleuchte (LED-Streifen, Stromschiene) in Modellkoordinaten mit absoluter Höhe.
+ *  - an: "pfette"              → Unterseite der Pfette, bereich = [y von, y bis]
+ *  - wand + seite              → entlang der Wandoberkante (folgt der Dachschräge), abstand_oben, abstand_wand
+ *  - pfad [[x, y, z], …]       → z über Geschossboden
+ * Liefert außerdem die Richtung in den Raum (Normale der Wandseite) für schräg ausgerichtete Spots.
+ */
+export function leuchtePfad(le: any, M: Masse, waende: WandInfo[]): { punkte: [number, number, number][]; raum: P2 | null } | null {
+  const basis = le.geschoss === "OG" ? M.ogZ : 0;
+  if (le.an === "pfette") {
+    const [y0, y1] = le.bereich ?? [0.3, M.L - 0.2];
+    const z = M.pfetteUK - (le.abstand_oben ?? 0.03);
+    return { punkte: [[M.firstX, y0, z], [M.firstX, y1, z]], raum: null };
+  }
+  if (le.wand) {
+    const w = waende.find((x) => x.id === le.wand);
+    if (!w) return null;
+    const r = himmelsrichtung(le.seite);
+    const s = r ? (r[0] * w.nx + r[1] * w.ny >= 0 ? 1 : -1) : 1;
+    const ab = w.dicke / 2 + (le.abstand_wand ?? 0.04);
+    const [uA, uB] = le.bereich ?? [w.versatzU + 0.05, w.laenge - w.versatzU - 0.05];
+    const punkte: [number, number, number][] = [];
+    const n = 24;
+    for (let i = 0; i <= n; i++) {
+      const u = uA + ((uB - uA) * i) / n;
+      punkte.push([w.a[0] + w.ux * u + w.nx * s * ab, w.a[1] + w.uy * u + w.ny * s * ab, w.oben(u) - (le.abstand_oben ?? 0.06)]);
+    }
+    return { punkte, raum: [w.nx * s, w.ny * s] };
+  }
+  if (Array.isArray(le.pfad) && le.pfad.length >= 2)
+    return { punkte: le.pfad.map((p: number[]) => [p[0], p[1], basis + (p[2] ?? 2.4)] as [number, number, number]), raum: null };
+  return null;
+}
+
+/** Lage einer Wand-Teilfläche: Seite und u-Bereich entlang der Wand (für den Plan). */
+export function flaecheLage(f: any, w: WandInfo, m: any): { seite: "plus" | "minus"; uA: number; uB: number; teil: boolean } {
+  const seite = seiteVon(f, w, m);
+  const ber: [number, number] | undefined = Math.abs(w.ux) > 0.5 ? f.x : f.y;
+  const achse0 = Math.abs(w.ux) > 0.5 ? w.a[0] : w.a[1];
+  const richt = Math.abs(w.ux) > 0.5 ? w.ux : w.uy;
+  let uA = w.versatzU, uB = w.laenge - w.versatzU;
+  if (ber) {
+    const a = (ber[0] - achse0) / richt, b = (ber[1] - achse0) / richt;
+    uA = Math.max(0, Math.min(a, b));
+    uB = Math.min(w.laenge, Math.max(a, b));
+  }
+  return { seite, uA, uB, teil: !!ber };
 }
 
 export function seitenName(w: WandInfo, seite: "plus" | "minus"): string {
@@ -493,7 +542,10 @@ function lamellen(w: WandInfo, g: THREE.Group, koll: KollSeg[]) {
 export interface TreppenWeg {
   zone: (x: number, y: number) => boolean;
   hoehe: (x: number, y: number) => number;
+  /** Steigungslinie über den Stufenvorderkanten (glatt) – für Handlauf und Wangen */
+  lauf: (x: number, y: number) => number;
   stufen: { poly: P2[]; z: number }[];
+  innen: { unten: [P2, P2]; oben: [P2, P2] };
 }
 
 export function treppenWeg(m: any, M: Masse): TreppenWeg {
@@ -557,7 +609,9 @@ export function treppenWeg(m: any, M: Masse): TreppenWeg {
       const k = Math.min(n, Math.floor((s / L) * n + 0.5));
       return Math.min(M.ogZ, k * steig);
     },
+    lauf: (x, y) => steig * (1 + (sVon(x, y) * n) / L),
     stufen,
+    innen: { unten: [[uX1, uY0], [cx, uY0]], oben: [[cx, oY1], [oX1, oY1]] },
   };
 }
 
@@ -582,12 +636,100 @@ function treppeBauen(weg: TreppenWeg, g: THREE.Group) {
     me.castShadow = true;
     g.add(me);
   }
+  // Innenwangen (Stahlblech) entlang der Steigungslinie an den offenen Seiten beider Läufe
+  for (const [a, b] of [weg.innen.unten, weg.innen.oben]) {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+    const n = 12;
+    const oben: THREE.Vector2[] = [], unten: THREE.Vector2[] = [];
+    for (let i = 0; i <= n; i++) {
+      const u = (L * i) / n;
+      const x = a[0] + ux * u, y = a[1] + uy * u;
+      const z = weg.lauf(x, y);
+      oben.push(new THREE.Vector2(u, z + 0.06));
+      unten.push(new THREE.Vector2(u, Math.max(0, z - 0.3)));
+    }
+    const sh = new THREE.Shape([...unten, ...oben.reverse()]);
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false });
+    geo.translate(0, 0, -0.006);
+    const U = new THREE.Vector3(ux, 0, uy), Y = new THREE.Vector3(0, 1, 0);
+    geo.applyMatrix4(new THREE.Matrix4().makeBasis(U, Y, new THREE.Vector3().crossVectors(U, Y)).setPosition(a[0], 0, a[1]));
+    const me = new THREE.Mesh(geo, stahl);
+    me.castShadow = true;
+    me.userData = { art: "treppe" };
+    g.add(me);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Geländer (Relinggeländer: Vierkantpfosten, 4 Rundstäbe, Handlauf Eiche)
+// ---------------------------------------------------------------------------
+function gelaenderBauen(m: any, M: Masse, weg: TreppenWeg, ziele: Record<string, THREE.Group>, segs: KollSeg[]) {
+  const stahl = mat("#1d1d1d", "metall", { name: "Geländer Stahl schwarz" });
+  const eiche = mat(EICHE, "holz", { name: "Handlauf Eiche" });
+  for (const f of m.feste_elemente ?? []) {
+    if (!String(f.typ).startsWith("gelaender") || !Array.isArray(f.punkte) || f.punkte.length < 2) continue;
+    const ge = f.geschoss ?? "EG";
+    const basis = ge === "OG" ? M.ogZ : 0;
+    const hoehe = f.hoehe ?? 0.9;
+    const staebe = f.staebe ?? 4;
+    const treppe = f.folgt === "treppe";
+    const zAn = (p: P2) => (treppe ? weg.lauf(p[0], p[1]) : basis);
+    const sub = new THREE.Group();
+    sub.userData = { art: "fest", id: f.id };
+    const balken = (a: THREE.Vector3, b: THREE.Vector3, quer: [number, number], m2: THREE.Material, rund = false) => {
+      const L = a.distanceTo(b);
+      const geo = rund ? new THREE.CylinderGeometry(quer[0] / 2, quer[0] / 2, L, 10) : new THREE.BoxGeometry(quer[0], L, quer[1]);
+      const me = new THREE.Mesh(geo, m2);
+      me.position.copy(a).add(b).multiplyScalar(0.5);
+      me.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      me.castShadow = true;
+      sub.add(me);
+    };
+    for (let i = 0; i + 1 < f.punkte.length; i++) {
+      const a: P2 = f.punkte[i], b: P2 = f.punkte[i + 1];
+      const za = zAn(a), zb = zAn(b);
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+      // Handlauf etwas über die Endpfosten hinaus
+      const ue = 0.05;
+      const ha = v3(a[0] - ux * ue, a[1] - uy * ue, za + hoehe - ((zb - za) / L) * ue);
+      const hb = v3(b[0] + ux * ue, b[1] + uy * ue, zb + hoehe + ((zb - za) / L) * ue);
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, ha.distanceTo(hb)), eiche);
+      hand.position.copy(ha).add(hb).multiplyScalar(0.5);
+      hand.lookAt(hb);
+      hand.castShadow = true;
+      sub.add(hand);
+      for (let k = 1; k <= staebe; k++) {
+        const dz = hoehe - 0.06 - (k * (hoehe - 0.18)) / staebe;
+        balken(v3(a[0], a[1], za + dz), v3(b[0], b[1], zb + dz), [0.012, 0.012], stahl, true);
+      }
+      const nP = Math.max(1, Math.round(L / 1.0));
+      for (let k = 0; k <= nP; k++) {
+        if (k === 0 && i > 0) continue;
+        const t = k / nP;
+        const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, z = za + (zb - za) * t;
+        const unten = treppe ? Math.max(0, z - 0.32) : basis;
+        balken(v3(x, y, unten), v3(x, y, z + hoehe - 0.02), [0.04, 0.04], stahl);
+      }
+      // Kollision stückweise (Neigung)
+      const teile = Math.max(1, Math.ceil(L / 0.25));
+      for (let k = 0; k < teile; k++) {
+        const t0 = k / teile, t1 = (k + 1) / teile;
+        const z0 = za + (zb - za) * t0, z1 = za + (zb - za) * t1;
+        segs.push({ ax: a[0] + (b[0] - a[0]) * t0, ay: a[1] + (b[1] - a[1]) * t0, bx: a[0] + (b[0] - a[0]) * t1, by: a[1] + (b[1] - a[1]) * t1,
+          r: 0.03, z0: Math.min(z0, z1) - 0.3, z1: Math.max(z0, z1) + hoehe });
+      }
+    }
+    (ge === "OG" ? ziele.og : ziele.eg).add(sub);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Feste Elemente (Küche, Bad, Technik)
 // ---------------------------------------------------------------------------
 function festeElemente(m: any, M: Masse, g: THREE.Group, koll: KollBox[]) {
+  const gAussen = g;
   const front = mat("#cfc8bb", "glatt", { name: "Küchenfront Cremegrau" });
   const platte = mat("#e4e0d8", "beton", { name: "Arbeitsplatte Beton" });
   const schwarz = mat("#1f1f1f", "glatt", { name: "Schwarz" });
@@ -651,8 +793,16 @@ function festeElemente(m: any, M: Masse, g: THREE.Group, koll: KollBox[]) {
     } else if (f.typ === "klimageraet_innen" && f.pos) {
       const [b, t, h] = f.masse ?? [0.9, 0.22, 0.3];
       // Gerät an der Ostwand: Breite entlang y
-      g.add(box(t, h, b, mat("#f7f7f5", "glatt", { name: "Klimagerät" }), f.pos[0] + 0.08 - t / 2, f.pos[1], (f.z ?? 2.85)));
+      const k = box(t, h, b, mat("#f7f7f5", "glatt", { name: "Klimagerät" }), f.pos[0] + 0.08 - t / 2, f.pos[1], (f.z ?? 2.85));
+      const sub = new THREE.Group();
+      sub.userData = { art: "fest", id: f.id };
+      sub.add(k);
+      g.add(sub);
     } else if (f.typ === "wc_wandhaengend" && f.pos) {
+      const sub = new THREE.Group();
+      sub.userData = { art: "fest", id: f.id };
+      g.add(sub);
+      g = sub as any;
       if (f.vorwand) {
         const [[x0, y0], [x1, y1]] = f.vorwand;
         const vw = box(Math.abs(x1 - x0), f.vorwand_hoehe ?? 1.2, Math.abs(y1 - y0), mat("#bdb7ad", "glatt", { name: "Vorwand Alu" }), (x0 + x1) / 2, (y0 + y1) / 2, z0 + (f.vorwand_hoehe ?? 1.2) / 2);
@@ -672,6 +822,7 @@ function festeElemente(m: any, M: Masse, g: THREE.Group, koll: KollBox[]) {
       wc.position.copy(v3(f.pos[0] - 0.05, f.pos[1], z0 + 0.32));
       wc.rotation.y = (-(f.rot ?? 270) * Math.PI) / 180 + Math.PI / 2;
       g.add(wc);
+      g = gAussen;
     }
   }
 }
@@ -882,6 +1033,7 @@ export function hausBauen(m: any): HausErgebnis {
   // Treppe
   const weg = treppenWeg(m, M);
   treppeBauen(weg, teile.eg);
+  gelaenderBauen(m, M, weg, teile, segs);
 
   // Feste Elemente
   festeElemente(m, M, teile.eg, boxen);

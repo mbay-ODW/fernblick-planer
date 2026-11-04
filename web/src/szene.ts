@@ -14,6 +14,14 @@ export interface SzenenRueckrufe {
   wandKlick: (wand: string, seite: "plus" | "minus", raum?: string) => void;
   bodenKlick: (raum: string) => void;
   kamera: () => void;
+  bauteil: (b: Bauteil) => void;
+  bauteilVerschoben: (b: Bauteil, dx: number, dy: number) => void;
+}
+
+/** Feste Einbauten (Küche, Bad, Geländer …) und Wand-Teilflächen (z. B. Aluverbundplatte) */
+export interface Bauteil {
+  art: "fest" | "flaeche";
+  id: string;
 }
 
 const AUGE = 1.62;
@@ -53,6 +61,7 @@ export class Szene {
   private blick = { gier: 0, nick: 0 };
   fuss = new THREE.Vector3(6, 0, 5); // Modell x, y, z (Fußhöhe)
   private ziehen: { id: string; ebene: THREE.Plane; versatz: THREE.Vector3; start: THREE.Vector2; aktiv: boolean } | null = null;
+  private bauteilZiehen: { b: Bauteil; obj: THREE.Object3D; ebene: THREE.Plane; p0: THREE.Vector3; pos0: THREE.Vector3; richtung?: THREE.Vector3; start: THREE.Vector2; aktiv: boolean; d: THREE.Vector3 } | null = null;
   private blickZiehen: { x: number; y: number } | null = null;
   private laufZiel: THREE.Vector2 | null = null;
   private szenarioWerte: Record<string, number> = {};
@@ -109,7 +118,7 @@ export class Szene {
 
   leuchtenNeu(m: any) {
     this.szene.remove(this.leuchtenGruppe);
-    const { gruppe, eintraege } = leuchtenBauen(m, this.haus.masse);
+    const { gruppe, eintraege } = leuchtenBauen(m, this.haus.masse, this.haus.waende);
     this.leuchtenGruppe = gruppe;
     this.leuchten = eintraege;
     this.szene.add(gruppe);
@@ -226,6 +235,41 @@ export class Szene {
     this.neu();
   }
 
+  /** Getroffenes Objekt → Einbau (userData.art = fest) oder Teilfläche (userData.flaeche) */
+  private bauteilVon(o: THREE.Object3D): { b: Bauteil; obj: THREE.Object3D } | null {
+    let x: THREE.Object3D | null = o;
+    while (x) {
+      if (x.userData.flaeche) return { b: { art: "flaeche", id: x.userData.flaeche }, obj: x };
+      if (x.userData.art === "fest" && x.userData.id) return { b: { art: "fest", id: x.userData.id }, obj: x };
+      x = x.parent;
+    }
+    return null;
+  }
+
+  markierenBauteil(b: Bauteil | null, obj?: THREE.Object3D) {
+    if (this.markierung) {
+      this.markierung.parent?.remove(this.markierung);
+      this.markierung.geometry.dispose();
+      this.markierung = null;
+    }
+    this.neu();
+    if (!b || !this.haus) return;
+    let ziel = obj ?? null;
+    if (!ziel)
+      this.haus.gruppe.traverse((o) => {
+        if (ziel) return;
+        if ((b.art === "flaeche" && o.userData.flaeche === b.id) || (b.art === "fest" && o.userData.art === "fest" && o.userData.id === b.id)) ziel = o;
+      });
+    if (!ziel) return;
+    const box = new THREE.Box3().setFromObject(ziel).expandByScalar(0.02);
+    const hl = new THREE.Box3Helper(box, 0xffb000);
+    (hl.material as THREE.LineBasicMaterial).depthTest = false;
+    hl.renderOrder = 999;
+    hl.userData.helfer = true;
+    this.szene.add(hl);
+    this.markierung = hl;
+  }
+
   fokus(id: string) {
     const x = this.modell.moebel.find((y: any) => y.id === id);
     if (!x || this.modus !== "orbit") return;
@@ -273,6 +317,19 @@ export class Szene {
         this.pinselTreffer(t);
         return;
       }
+      const bt = !mid && t ? this.bauteilVon(t.object) : null;
+      if (bt && t) {
+        this.rueck.bauteil(bt.b);
+        const ebene = new THREE.Plane(new THREE.Vector3(0, 1, 0), -t.point.y);
+        let richtung: THREE.Vector3 | undefined;
+        if (bt.b.art === "flaeche") {
+          const w = this.haus.waende.find((x) => x.id === bt.obj.userData.wand);
+          if (w) richtung = new THREE.Vector3(w.ux, 0, w.uy);
+        }
+        this.bauteilZiehen = { b: bt.b, obj: bt.obj, ebene, p0: t.point.clone(), pos0: bt.obj.position.clone(), richtung, start: new THREE.Vector2(e.clientX, e.clientY), aktiv: false, d: new THREE.Vector3() };
+        el.setPointerCapture(e.pointerId);
+        return;
+      }
       if (mid) {
         if (mid !== this.auswahlId) this.rueck.auswahl(mid);
         const x = this.modell.moebel.find((y: any) => y.id === mid);
@@ -292,6 +349,27 @@ export class Szene {
         this.blickZiehen.x = e.clientX;
         this.blickZiehen.y = e.clientY;
         this.drehen(dx, dy, 0.004);
+        return;
+      }
+      const bz = this.bauteilZiehen;
+      if (bz) {
+        if (!bz.aktiv && bz.start.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) < 4) return;
+        bz.aktiv = true;
+        this.orbit.enabled = false;
+        this.treffer(e, []);
+        const p = new THREE.Vector3();
+        if (!this.ray.ray.intersectPlane(bz.ebene, p)) return;
+        const d = p.sub(bz.p0);
+        d.y = 0;
+        if (bz.richtung) d.copy(bz.richtung).multiplyScalar(d.dot(bz.richtung));
+        const raster = e.altKey ? 0.01 : 0.05;
+        d.x = Math.round(d.x / raster) * raster;
+        d.z = Math.round(d.z / raster) * raster;
+        bz.d.copy(d);
+        bz.obj.position.copy(bz.pos0).add(d);
+        if (this.markierung && !this.markierung.parent?.userData.moebelId) this.markierenBauteil(bz.b, bz.obj);
+        this.renderer.shadowMap.needsUpdate = true;
+        this.neu();
         return;
       }
       if (!this.ziehen) return;
@@ -317,6 +395,14 @@ export class Szene {
         const kurz = performance.now() - b.zeit < 300 && Math.hypot(e.clientX - b.x, e.clientY - b.y) < 5;
         this.blickZiehen = null;
         if (kurz && b.treffer && !document.pointerLockElement) this.begehenKlick(b.treffer, e);
+        return;
+      }
+      if (this.bauteilZiehen) {
+        const bz = this.bauteilZiehen;
+        this.bauteilZiehen = null;
+        this.orbit.enabled = true;
+        if (bz.aktiv && (Math.abs(bz.d.x) > 1e-4 || Math.abs(bz.d.z) > 1e-4))
+          this.rueck.bauteilVerschoben(bz.b, Math.round(bz.d.x * 1000) / 1000, Math.round(bz.d.z * 1000) / 1000);
         return;
       }
       if (this.ziehen) {
@@ -370,6 +456,8 @@ export class Szene {
     if (this.pinsel) return this.pinselTreffer(t);
     const mid = t.object.userData.moebelId;
     if (mid) return this.rueck.auswahl(mid);
+    const bt = this.bauteilVon(t.object);
+    if (bt) return this.rueck.bauteil(bt.b);
     if (t.face && t.face.normal.y > 0.7 && !e.shiftKey) {
       // auf den Boden geklickt → dorthin laufen
       this.laufZiel = new THREE.Vector2(t.point.x, t.point.z);

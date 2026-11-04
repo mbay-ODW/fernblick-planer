@@ -822,7 +822,7 @@
    "wange_ak": 0.92,
    "belag": "Eiche Parkett 40 mm",
    "wangen": "Stahl RAL 9005 matt",
-   "absturzsicherung": "bauseits",
+   "absturzsicherung": "Relinggeländer an den Innenseiten (gelaender-treppe-unten/-oben)",
    "kopffreiheit": ">2,00",
    "quelle_detail": "Werkplan Warkentin/VIWELD V1 12.05.2026",
    "sicher": "Antritt Stufe 1 an Ostende des unteren Laufs, Lauf nach Westen, Wende 5–8 an Westwand, 9–16 entlang Schlafzimmerwand nach Osten – laut Werkplan"
@@ -1099,6 +1099,48 @@
    ],
    "sicher": false,
    "hinweis": "2 Speicher laut Lichtplan-Skizze; HWR braucht kein Einrichtungskonzept (Murat)"
+  },
+  {
+   "id": "gelaender-treppe-unten",
+   "typ": "gelaender_reling",
+   "geschoss": "EG",
+   "folgt": "treppe",
+   "punkte": [
+    [
+     1.563,
+     6.195
+    ],
+    [
+     0.92,
+     6.195
+    ]
+   ],
+   "hoehe": 0.9,
+   "staebe": 4,
+   "material": "Pfosten Vierkant 40×40 und 4 Rundstäbe Stahl schwarz, Handlauf Eiche",
+   "hinweis": "Innenseite unterer Lauf bis zum Wendelpfosten",
+   "quelle": "Murat 04.11.2026 (Foto Treppe)"
+  },
+  {
+   "id": "gelaender-treppe-oben",
+   "typ": "gelaender_reling",
+   "geschoss": "EG",
+   "folgt": "treppe",
+   "punkte": [
+    [
+     0.92,
+     6.095
+    ],
+    [
+     2.98,
+     6.095
+    ]
+   ],
+   "hoehe": 0.9,
+   "staebe": 4,
+   "material": "Pfosten Vierkant 40×40 und 4 Rundstäbe Stahl schwarz, Handlauf Eiche",
+   "hinweis": "offene Seite oberer Lauf vom Wendelpfosten bis zur Galerie (schließt an die Glasbrüstung an)",
+   "quelle": "Murat 04.11.2026 (Foto Treppe)"
   }
  ],
  "moebel": [
@@ -1972,6 +2014,55 @@
    "anordnung": "kreisförmig, gestaffelt",
    "unterkante_ueber_tisch": 0.7,
    "quelle": "Murat 02.11."
+  },
+  {
+   "id": "schiene-pfette",
+   "typ": "stromschiene",
+   "name": "Stromschiene Pfette (Wohnen/Essen)",
+   "geschoss": "EG",
+   "raum": "wohnen",
+   "an": "pfette",
+   "bereich": [
+    5.6,
+    10.9
+   ],
+   "anzahl": 6,
+   "lumen": 2400,
+   "kelvin": 2700,
+   "abstrahlwinkel": 36,
+   "hinweis": "schwarze Schiene unter der Pfette, Spots in den Wohn-/Essbereich",
+   "quelle": "Murat 04.11.2026 (Foto IMG_7051)"
+  },
+  {
+   "id": "schiene-galerie",
+   "typ": "stromschiene",
+   "name": "Stromschiene Empore (Galerie)",
+   "geschoss": "OG",
+   "raum": "galerie",
+   "wand": "OG-IW-kinder-ost",
+   "seite": "Ost",
+   "abstand_oben": 0.1,
+   "anzahl": 5,
+   "lumen": 2000,
+   "kelvin": 2700,
+   "neigung": 0.8,
+   "hinweis": "Schiene oben an der Holzwand zum Kinderzimmer, Spots in die Galerie",
+   "quelle": "Murat 04.11.2026 (Foto IMG_6908)"
+  },
+  {
+   "id": "led-giebel-holzwand",
+   "typ": "led_streifen",
+   "name": "LED indirekt Giebel Holzwand",
+   "geschoss": "OG",
+   "raum": "wohnen",
+   "wand": "OG-IW-kinder-sued",
+   "seite": "Süd",
+   "abstand_oben": 0.05,
+   "abstand_wand": 0.03,
+   "lumen": 2400,
+   "kelvin": 2700,
+   "hinweis": "LED-Streifen in der Fuge Wand/Dachschräge, streift die Holzwand Wohnzimmer/Kinderzimmer",
+   "quelle": "Murat 04.11.2026 (Foto IMG_7239)"
   }
  ],
  "offene_fragen": [
@@ -2080,7 +2171,8 @@
     "material": "Aluverbundplatte",
     "farbe": "hellgrau/greige matt",
     "quelle": "Foto Bad",
-    "sicher": false
+    "sicher": false,
+    "gehoert_zu": "bad-dusche"
    },
    {
     "id": "alu-bad-vorwand",
@@ -2113,7 +2205,8 @@
     "material": "Aluverbundplatte",
     "farbe": "hellgrau/greige matt",
     "quelle": "Foto Bad (Spritzschutz hinter Waschtisch)",
-    "sicher": false
+    "sicher": false,
+    "gehoert_zu": "bad-wt"
    }
   ]
  }

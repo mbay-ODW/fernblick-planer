@@ -1,5 +1,7 @@
 // 2D-Grundriss (SVG, Norden oben): Räume, Wände mit Öffnungen, Einbauten, Möbel zum Ziehen und Drehen, Maßketten
-import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse } from "./haus";
+import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad } from "./haus";
+import type { Bauteil } from "./szene";
+import { bauteilFinden, bauteilVerschieben, mitlaeuferKopie } from "./bauteile";
 import { ecken, istFlach } from "./moebel";
 import { wandPoly } from "./pruefung";
 
@@ -11,6 +13,8 @@ export interface PlanRueckrufe {
   fertig: (id: string, pos: P2, rot: number) => void;
   wandKlick: (wand: string, seite: "plus" | "minus") => void;
   bodenKlick: (raum: string) => void;
+  bauteil: (b: Bauteil) => void;
+  bauteilFertig: (b: Bauteil) => void;
 }
 
 function el<K extends keyof SVGElementTagNameMap>(tag: K, attr: Record<string, any> = {}, eltern?: Element): SVGElementTagNameMap[K] {
@@ -28,6 +32,7 @@ export class Plan {
   private modell: any;
   private geschoss: "EG" | "OG" = "EG";
   private auswahl: string | null = null;
+  private bauteil: Bauteil | null = null;
   private warnIds = new Set<string>();
   private waende: WandInfo[] = [];
   private M!: Masse;
@@ -43,8 +48,9 @@ export class Plan {
     new ResizeObserver(() => this.einpassen(false)).observe(behaelter);
   }
 
-  setzen(m: any, geschoss: "EG" | "OG", auswahl: string | null, warnIds: Set<string>) {
+  setzen(m: any, geschoss: "EG" | "OG", auswahl: string | null, warnIds: Set<string>, bauteil: Bauteil | null = null) {
     this.modell = m;
+    this.bauteil = bauteil;
     this.geschoss = geschoss;
     this.auswahl = auswahl;
     this.warnIds = warnIds;
@@ -126,10 +132,11 @@ export class Plan {
 
     // Einbauten und Treppe
     const ein = el("g", { class: "einbau" }, svg);
+    const gw = (f: any) => (this.bauteil?.art === "fest" && this.bauteil.id === f.id ? " gewaehlt" : "");
     for (const f of m.feste_elemente) {
       if ((f.geschoss ?? "EG") !== ge || !f.rechteck) continue;
       const [[x0, y0], [x1, y1]] = f.rechteck;
-      el("rect", { x: Math.min(x0, x1), y: Math.min(y0, y1), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) }, ein);
+      el("rect", { x: Math.min(x0, x1), y: Math.min(y0, y1), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0), "data-fest": f.id, class: "fest" + gw(f) }, ein);
       if (f.typ === "backofen_kochfeld") {
         for (const [dx, dy] of [[0.25, 0.25], [0.25, 0.75], [0.75, 0.25], [0.75, 0.75]])
           el("circle", { cx: x0 + (x1 - x0) * dx, cy: y0 + (y1 - y0) * dy, r: 0.09, class: "kochfeld" }, ein);
@@ -138,15 +145,19 @@ export class Plan {
     }
     for (const f of m.feste_elemente) {
       if (f.typ === "wc_wandhaengend" && ge === "EG" && f.pos) {
-        el("ellipse", { cx: f.pos[0] - 0.08, cy: f.pos[1], rx: 0.28, ry: 0.19 }, ein);
         if (f.vorwand) {
           const [[x0, y0], [x1, y1]] = f.vorwand;
-          el("rect", { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }, ein);
+          el("rect", { x: x0, y: y0, width: x1 - x0, height: y1 - y0, "data-fest": f.id, class: "fest" + gw(f) }, ein);
         }
+        el("ellipse", { cx: f.pos[0] - 0.08, cy: f.pos[1], rx: 0.28, ry: 0.19, "data-fest": f.id, class: "fest" + gw(f) }, ein);
       }
       if (f.glaswand && ge === "EG") {
         const [[x0, y0], [x1, y1]] = f.glaswand;
-        el("line", { x1: x0, y1: y0, x2: x1, y2: y1, class: "glas" }, svg);
+        el("line", { x1: x0, y1: y0, x2: x1, y2: y1, class: "glas", "data-fest": f.id }, svg);
+      }
+      if (f.typ === "klimageraet_innen" && f.pos && ge === "EG") {
+        const b = f.masse?.[0] ?? 0.9, t = f.masse?.[1] ?? 0.22;
+        el("rect", { x: f.pos[0] + 0.08 - t, y: f.pos[1] - b / 2, width: t, height: b, "data-fest": f.id, class: "fest klima" + gw(f) }, ein);
       }
     }
     if (ge === "EG") {
@@ -196,6 +207,29 @@ export class Plan {
       }
     }
 
+    // Wand-Teilflächen und Farbflächen als Streifen an der Wandseite
+    const fg = el("g", { class: "flaechen" }, svg);
+    for (const f of m.oberflaechen?.flaechen ?? []) {
+      if (!f.wand) continue;
+      const w = this.waende.find((x) => x.id === f.wand && x.geschoss === ge);
+      if (!w) continue;
+      const lg = flaecheLage(f, w, m);
+      const s = lg.seite === "plus" ? 1 : -1;
+      const o0 = s * (w.dicke / 2 + 0.005), o1 = s * (w.dicke / 2 + 0.045);
+      const P = (u: number, o: number): P2 => [w.a[0] + w.ux * u + w.nx * o, w.a[1] + w.uy * u + w.ny * o];
+      const gew = this.bauteil?.art === "flaeche" && this.bauteil.id === f.id ? " gewaehlt" : "";
+      el("polygon", { points: pts([P(lg.uA, o0), P(lg.uB, o0), P(lg.uB, o1), P(lg.uA, o1)]), style: `fill:${f.farbe_hex ?? "#bbb"}`,
+        class: "flaeche" + (lg.teil ? " teil" : "") + gew, "data-flaeche": f.id }, fg);
+    }
+
+    // Geländer
+    const gl = el("g", { class: "gelaender" }, svg);
+    for (const f of m.feste_elemente) {
+      if (!String(f.typ).startsWith("gelaender") || (f.geschoss ?? "EG") !== ge || !Array.isArray(f.punkte)) continue;
+      el("polyline", { points: pts(f.punkte), "data-fest": f.id, class: gw(f) }, gl);
+      for (const p of f.punkte) el("rect", { x: p[0] - 0.03, y: p[1] - 0.03, width: 0.06, height: 0.06, "data-fest": f.id }, gl);
+    }
+
     // Möbel
     const mg = el("g", { class: "moebel" }, svg);
     const liste = (m.moebel ?? []).filter((x: any) => x.geschoss === ge);
@@ -205,6 +239,21 @@ export class Plan {
     // Leuchten
     const lg = el("g", { class: "leuchten" }, svg);
     for (const le of m.leuchten ?? []) {
+      const pf = !le.pos ? leuchtePfad(le, this.M, this.waende) : null;
+      if (pf) {
+        const zeigen = ge === "OG" ? pf.punkte.some((p) => p[2] > this.M.ogZ) : pf.punkte.some((p) => p[2] < this.M.ogZ + 0.5) || le.geschoss === "EG";
+        if (!zeigen) continue;
+        el("polyline", { points: pts(pf.punkte.map((p) => [p[0], p[1]] as P2)), class: le.typ === "stromschiene" ? "schiene" : "streifen" }, lg);
+        if (le.typ === "stromschiene") {
+          const n = Math.max(1, le.anzahl ?? 4);
+          const a = pf.punkte[0], b = pf.punkte[pf.punkte.length - 1];
+          for (let i = 0; i < n; i++) {
+            const t = (i + 0.5) / n;
+            el("circle", { cx: a[0] + (b[0] - a[0]) * t, cy: a[1] + (b[1] - a[1]) * t, r: 0.05 }, lg);
+          }
+        }
+        continue;
+      }
       if ((le.geschoss ?? "EG") !== ge || !le.pos) continue;
       el("circle", { cx: le.pos[0], cy: le.pos[1], r: 0.09 }, lg);
       el("line", { x1: le.pos[0] - 0.12, y1: le.pos[1], x2: le.pos[0] + 0.12, y2: le.pos[1] }, lg);
@@ -311,6 +360,8 @@ export class Plan {
         return;
       }
       const stueck = ziel.closest?.(".stueck") as Element | null;
+      const flId = ziel.getAttribute?.("data-flaeche");
+      const festId = ziel.getAttribute?.("data-fest");
       if (this.pinsel) {
         const wand = ziel.getAttribute?.("data-wand");
         if (wand) {
@@ -321,6 +372,16 @@ export class Plan {
         }
         const raum = (ziel.closest?.("[data-raum]") as Element | null)?.getAttribute("data-raum");
         if (raum) this.rueck.bodenKlick(raum);
+        return;
+      }
+      if (!stueck && (flId || festId)) {
+        const b: Bauteil = flId ? { art: "flaeche", id: flId } : { art: "fest", id: festId! };
+        this.rueck.bauteil(b);
+        const f = bauteilFinden(this.modell, b);
+        if (!f) return;
+        const w = flId ? this.waende.find((x) => x.id === f.wand) : undefined;
+        const beweglich = !flId || !!(f.x || f.y);
+        this.ziehen = beweglich ? { art: "bauteil", b, orig: structuredClone(f), mit: mitlaeuferKopie(this.modell, b), start: p, w, aktiv: false } : null;
         return;
       }
       if (stueck) {
@@ -356,6 +417,22 @@ export class Plan {
         return;
       }
       const p = this.nachModell(e);
+      if (z.art === "bauteil") {
+        let dx = p[0] - z.start[0], dy = p[1] - z.start[1];
+        if (!z.aktiv && Math.hypot(dx, dy) < 0.03) return;
+        z.aktiv = true;
+        if (z.w) {
+          const d = dx * z.w.ux + dy * z.w.uy;
+          dx = z.w.ux * d;
+          dy = z.w.uy * d;
+        }
+        const rr = e.altKey ? 0.01 : 0.05;
+        dx = Math.round(dx / rr) * rr;
+        dy = Math.round(dy / rr) * rr;
+        bauteilVerschieben(this.modell, z.b, dx, dy, z.orig, z.mit);
+        this.zeichnen();
+        return;
+      }
       if (z.art === "moebel") {
         if (!z.aktiv && Math.hypot(p[0] - z.start[0], p[1] - z.start[1]) < 0.03) return;
         z.aktiv = true;
@@ -381,6 +458,7 @@ export class Plan {
       this.ziehen = null;
       if (!z) return;
       if ((z.art === "moebel" || z.art === "drehen") && z.aktiv) this.rueck.fertig(z.id, z.x.pos, z.x.rot_grad ?? 0);
+      if (z.art === "bauteil" && z.aktiv) this.rueck.bauteilFertig(z.b);
       if (z.art === "pan" && !z.bewegt) this.rueck.auswahl(null);
     };
     svg.addEventListener("pointerup", ende);

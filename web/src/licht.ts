@@ -3,7 +3,8 @@ import * as THREE from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { kelvinFarbe, leuchtMat, mat } from "./material";
-import type { Masse } from "./haus";
+import { leuchtePfad } from "./haus";
+import type { Masse, WandInfo } from "./haus";
 
 const RAD = Math.PI / 180;
 
@@ -139,7 +140,7 @@ export class Beleuchtung {
 // ---------------------------------------------------------------------------
 // Leuchten aus dem Modell
 // ---------------------------------------------------------------------------
-export function leuchtenBauen(m: any, M: Masse): { gruppe: THREE.Group; eintraege: LeuchteEintrag[] } {
+export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = []): { gruppe: THREE.Group; eintraege: LeuchteEintrag[] } {
   const g = new THREE.Group();
   g.name = "Leuchten";
   const eintraege: LeuchteEintrag[] = [];
@@ -192,6 +193,71 @@ export function leuchtenBauen(m: any, M: Masse): { gruppe: THREE.Group; eintraeg
       pl.position.set(x, z, y);
       g.add(pl);
       lichter.push(pl);
+    } else if ((typ === "stromschiene" || typ === "led_streifen") && leuchtePfad(le, M, waende)) {
+      const pf = leuchtePfad(le, M, waende)!;
+      const P = pf.punkte.map(([px, py, pz]) => new THREE.Vector3(px, pz, py));
+      const laengen = [0];
+      for (let i = 1; i < P.length; i++) laengen.push(laengen[i - 1] + P[i].distanceTo(P[i - 1]));
+      const gesamt = laengen[laengen.length - 1];
+      const an = (s: number) => {
+        let i = 1;
+        while (i < P.length - 1 && laengen[i] < s) i++;
+        const t = (s - laengen[i - 1]) / Math.max(1e-6, laengen[i] - laengen[i - 1]);
+        return P[i - 1].clone().lerp(P[i], Math.max(0, Math.min(1, t)));
+      };
+      const stab = (a: THREE.Vector3, b: THREE.Vector3, quer: number, hoch: number, m2: THREE.Material) => {
+        const me = new THREE.Mesh(new THREE.BoxGeometry(quer, hoch, a.distanceTo(b)), m2);
+        me.position.copy(a).add(b).multiplyScalar(0.5);
+        me.lookAt(b);
+        g.add(me);
+      };
+      const raum = pf.raum ? new THREE.Vector3(pf.raum[0], 0, pf.raum[1]) : null;
+      if (typ === "stromschiene") {
+        for (let i = 1; i < P.length; i++) stab(P[i - 1], P[i], 0.035, 0.035, schwarz);
+        const n = Math.max(1, le.anzahl ?? Math.round(gesamt / 0.9));
+        for (let i = 0; i < n; i++) {
+          const q = an(((i + 0.5) / n) * gesamt).add(new THREE.Vector3(0, -0.07, 0));
+          // Ausrichtung: in den Raum geneigt (Wand) bzw. abwechselnd zu beiden Seiten (Pfette)
+          const dir = new THREE.Vector3(0, -1, 0);
+          if (raum) dir.addScaledVector(raum, le.neigung ?? 0.7);
+          else dir.x += (i % 2 ? 1 : -1) * (le.neigung ?? 0.35);
+          dir.normalize();
+          const kopf = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.09, 16), schwarz);
+          kopf.position.copy(q);
+          kopf.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+          g.add(kopf);
+          const lm = leuchtMat("#fff6e0", kelvin);
+          mats.push(lm);
+          const linse = new THREE.Mesh(new THREE.CircleGeometry(0.024, 16), lm);
+          linse.position.copy(q).addScaledVector(dir, 0.046);
+          linse.lookAt(q.clone().addScaledVector(dir, 1));
+          g.add(linse);
+          const sp = new THREE.SpotLight(kelvinFarbe(kelvin), 0, 14, ((le.abstrahlwinkel ?? 36) / 2) * (Math.PI / 180), 0.5, 2);
+          sp.position.copy(q).addScaledVector(dir, 0.05);
+          sp.target.position.copy(q).addScaledVector(dir, 3);
+          sp.shadow.mapSize.set(1024, 1024);
+          sp.shadow.bias = -0.0008;
+          sp.userData = { spot: true, anteil: 1 / n };
+          g.add(sp, sp.target);
+          lichter.push(sp);
+        }
+      } else {
+        const lm = leuchtMat("#ffffff", kelvin);
+        mats.push(lm);
+        for (let i = 1; i < P.length; i++) stab(P[i - 1], P[i], 0.012, 0.02, lm);
+        const n = Math.max(2, Math.round(gesamt / 0.45));
+        for (let i = 0; i < n; i++) {
+          const q = an(((i + 0.5) / n) * gesamt);
+          // etwas Abstand von der Wand, damit das Licht als Streiflicht statt als Lichtpunkte ankommt
+          if (raum) q.addScaledVector(raum, 0.14);
+          q.y -= 0.1;
+          const pl = new THREE.PointLight(kelvinFarbe(kelvin), 0, 5, 2);
+          pl.position.copy(q);
+          pl.userData = { anteil: 1 / n };
+          g.add(pl);
+          lichter.push(pl);
+        }
+      }
     } else if (typ === "led_streifen") {
       const z = z0 + (le.z ?? 2.4);
       const L = le.laenge ?? 1.5;

@@ -2,7 +2,8 @@
 import "./stil.css";
 import { api, KonfliktFehler } from "./api";
 import { h, leeren, toast, zahl, zeitText, frage } from "./dom";
-import { Szene, Geschossfilter } from "./szene";
+import { Szene, Geschossfilter, Bauteil } from "./szene";
+import { bauteilFinden, bauteilVerschieben } from "./bauteile";
 import { Plan } from "./plan2d";
 import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2 } from "./haus";
@@ -33,6 +34,7 @@ class App {
   modus: Modus = "3d";
   planGeschoss: "EG" | "OG" = "EG";
   auswahl: string | null = null;
+  bauteil: Bauteil | null = null;
   hinweise: Hinweis[] = [];
   tab = "moebel";
   ich = "";
@@ -58,6 +60,8 @@ class App {
       wandKlick: (w, s) => this.wandMalen(w, s),
       bodenKlick: (r) => this.bodenMalen(r),
       kamera: () => this.render?.kameraGeaendert(),
+      bauteil: (b) => this.bauteilWaehlen(b),
+      bauteilVerschoben: (b, dx, dy) => this.aendern((m) => bauteilVerschieben(m, b, dx, dy), "haus", `${b.id} verschoben`),
     });
     this.plan = new Plan(document.getElementById("ansicht2d")!, {
       auswahl: (id) => this.waehlen(id),
@@ -68,6 +72,8 @@ class App {
       fertig: (id, pos, rot) => this.aendern((m) => this.lage(m, id, pos, rot), "moebel", "Möbel im Plan verschoben"),
       wandKlick: (w, s) => this.wandMalen(w, s),
       bodenKlick: (r) => this.bodenMalen(r),
+      bauteil: (b) => this.bauteilWaehlen(b),
+      bauteilFertig: (b) => this.aendern(() => {}, "haus", `${b.id} verschoben`),
     });
     this.render = new RenderAnsicht(document.getElementById("ansichtRender")!, this);
     this.modell = await api.modell();
@@ -104,7 +110,10 @@ class App {
   }
 
   neuZeichnen(art: Art) {
-    if (art === "haus") this.szene.laden(this.modell);
+    if (art === "haus") {
+      this.szene.laden(this.modell);
+      if (this.bauteil) this.szene.markierenBauteil(this.bauteil);
+    }
     else if (art === "moebel") this.szene.moebelNeu(this.modell);
     else if (art === "licht") this.szene.leuchtenNeu(this.modell);
     if (art !== "haus") this.szene.einstellungen(this.modell.einstellungen ?? {});
@@ -122,7 +131,7 @@ class App {
   }
 
   planNeu() {
-    if (this.modus === "2d") this.plan.setzen(this.modell, this.planGeschoss, this.auswahl, new Set(this.hinweise.flatMap((x) => x.ids)));
+    if (this.modus === "2d") this.plan.setzen(this.modell, this.planGeschoss, this.auswahl, new Set(this.hinweise.flatMap((x) => x.ids)), this.bauteil);
   }
 
   rueckgaengig() {
@@ -145,8 +154,10 @@ class App {
     this.modell.meta.version = v;
     this.stand = JSON.stringify(this.modell);
     if (this.auswahl && !this.modell.moebel.some((x: any) => x.id === this.auswahl)) this.auswahl = null;
+    if (!bauteilFinden(this.modell, this.bauteil)) this.bauteil = null;
     this.szene.laden(this.modell);
     this.szene.markieren(this.auswahl);
+    if (this.bauteil) this.szene.markierenBauteil(this.bauteil);
     this.notizen.push(notiz);
     this.allesNeu();
     this.speichernPlanen();
@@ -255,8 +266,19 @@ class App {
     x.raum = this.raumAn(m, pos, x.geschoss) ?? x.raum;
   }
 
+  bauteilWaehlen(b: Bauteil | null) {
+    this.auswahl = null;
+    this.bauteil = b;
+    this.szene.markieren(null);
+    this.szene.markierenBauteil(b);
+    this.planNeu();
+    this.eigenschaftenNeu();
+    if (this.tab === "moebel") this.seiteNeu();
+  }
+
   waehlen(id: string | null) {
     this.auswahl = id;
+    this.bauteil = null;
     this.szene.markieren(id);
     if (id) {
       const x = this.modell.moebel.find((y: any) => y.id === id);
@@ -425,6 +447,14 @@ class App {
         return;
       }
       const beg = this.modus === "3d" && this.szene.modus === "begehen";
+      if (this.bauteil && !beg && e.key.startsWith("Arrow")) {
+        e.preventDefault();
+        const st = e.shiftKey ? 0.25 : e.altKey ? 0.01 : 0.05;
+        const d: Record<string, P2> = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] };
+        const b = this.bauteil;
+        this.aendern((m) => bauteilVerschieben(m, b, ...d[e.key]), "haus", `${b.id} verschoben`);
+        return;
+      }
       if (!this.auswahl) return;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); this.loeschen(); }
       else if (e.key === "r" || e.key === "R") this.drehen(e.shiftKey ? -90 : 90);
@@ -667,8 +697,13 @@ class App {
     const werte = { ...((sz.find((x: any) => x.id === e.szenario)?.leuchten) ?? {}), ...(e.dimmer ?? {}) };
     for (const l of this.szene.alleLeuchten()) {
       const v = Math.round((werte[l.id] ?? 0) * 100);
+      const kelvins = [...new Set([2200, 2700, 3000, 3500, 4000, l.kelvin])].sort((x, y) => x - y);
       c.append(h("div", { class: "eintrag licht" },
-        h("span", { class: "name" }, l.name, h("small", {}, ` ${l.lumen} lm · ${l.kelvin} K`)),
+        h("span", { class: "name" }, l.name, h("small", {}, ` ${l.lumen} lm`)),
+        h("select", { class: "kelvin", title: "Farbtemperatur", onchange: (ev: Event) => this.lichtSetzen(l, { kelvin: Number((ev.target as HTMLSelectElement).value) }) },
+          ...kelvins.map((k) => h("option", { value: k, selected: k === l.kelvin }, `${k} K`))),
+        h("input", { type: "number", class: "lumen", title: "Lichtstrom (Lumen)", min: 0, step: 50, value: l.lumen,
+          onchange: (ev: Event) => { const n = Number((ev.target as HTMLInputElement).value); if (n >= 0) this.lichtSetzen(l, { lumen: n }); } }),
         h("input", { type: "range", min: 0, max: 100, step: 5, value: v,
           oninput: (ev: Event) => { this.modell.einstellungen.dimmer = { ...(this.modell.einstellungen.dimmer ?? {}), [l.id]: Number((ev.target as HTMLInputElement).value) / 100 }; this.szene.szenarioAnwenden(); },
           onchange: () => this.einst(() => {}, `Dimmer ${l.name}`) }),
@@ -678,6 +713,21 @@ class App {
       h("button", { onclick: () => this.szenarioSpeichern(false) }, "Als neues Szenario"),
       e.szenario ? h("button", { onclick: () => this.szenarioSpeichern(true) }, "Szenario überschreiben") : null));
     c.append(h("p", { class: "dezent" }, "Die Deckenleuchten sind Platzhalter (Annahme), bis die Lichtplanung eingepflegt ist – über den MCP mit leuchten_setzen."));
+  }
+
+  /** Farbtemperatur oder Lichtstrom einer Leuchte (Modell-Leuchte oder Möbel mit Licht) ändern */
+  private lichtSetzen(l: { id: string; name: string; lumen: number; kelvin: number }, felder: { kelvin?: number; lumen?: number }) {
+    const istMoebel = (this.modell.moebel ?? []).some((x: any) => x.id === l.id);
+    const text = felder.kelvin ? `${felder.kelvin} K` : `${felder.lumen} lm`;
+    this.aendern((m) => {
+      if (istMoebel) {
+        const x = m.moebel.find((y: any) => y.id === l.id);
+        x.licht = { lumen: l.lumen, kelvin: l.kelvin, ...(x.licht ?? {}), ...felder };
+      } else {
+        const le = (m.leuchten ?? []).find((y: any) => y.id === l.id);
+        if (le) Object.assign(le, felder);
+      }
+    }, istMoebel ? "moebel" : "licht", `${l.name}: ${text}`);
   }
 
   private szenarioSpeichern(ueberschreiben: boolean) {
@@ -803,8 +853,10 @@ class App {
   eigenschaftenNeu() {
     const p = document.getElementById("eigenschaften")!;
     const x = this.gewaehlt();
-    p.hidden = !x;
+    const bt = bauteilFinden(this.modell, this.bauteil);
+    p.hidden = !x && !bt;
     leeren(p);
+    if (bt) return this.bauteilEigenschaften(p, bt);
     if (!x) return;
     const setze = (feld: string, wert: any, notiz?: string) =>
       this.aendern((m) => {
@@ -841,6 +893,72 @@ class App {
         h("button", { onclick: () => this.duplizieren() }, "Duplizieren"),
         x.link ? h("a", { href: x.link, target: "_blank", rel: "noopener", class: "knopf" }, "Shop ↗") : null,
         h("button", { class: "warn", onclick: () => this.loeschen() }, "Löschen")),
+    );
+  }
+
+  private bauteilEigenschaften(p: HTMLElement, f: any) {
+    const b = this.bauteil!;
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    const num = (wert: number, fn: (v: number) => void, step = 0.01) =>
+      h("input", { type: "number", step, value: r3(wert), onchange: (e: Event) => { const v = parseFloat((e.target as HTMLInputElement).value.replace(",", ".")); if (!isNaN(v)) fn(v); } });
+    const setze = (fn: (g: any) => void, notiz: string) =>
+      this.aendern((m) => fn(bauteilFinden(m, b)), "haus", notiz);
+    const felder: (HTMLElement | string)[] = [];
+    if (b.art === "fest") {
+      if (Array.isArray(f.rechteck)) {
+        const [[x0, y0], [x1, y1]] = f.rechteck;
+        const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, bw = Math.abs(x1 - x0), bt = Math.abs(y1 - y0);
+        const rechteck = (ncx: number, ncy: number, nb: number, nt: number) => setze((g) => {
+          g.rechteck = [[r3(ncx - nb / 2), r3(ncy - nt / 2)], [r3(ncx + nb / 2), r3(ncy + nt / 2)]];
+        }, `${f.id} Maße`);
+        felder.push(
+          h("label", {}, "Breite x / Tiefe y"), h("div", { class: "zwei" }, num(bw, (v) => rechteck(cx, cy, Math.max(0.02, v), bt)), num(bt, (v) => rechteck(cx, cy, bw, Math.max(0.02, v)))),
+          h("label", {}, "Mitte x / y"), h("div", { class: "zwei" }, num(cx, (v) => this.aendern((m) => bauteilVerschieben(m, b, v - cx, 0), "haus", `${f.id} verschoben`), 0.05),
+            num(cy, (v) => this.aendern((m) => bauteilVerschieben(m, b, 0, v - cy), "haus", `${f.id} verschoben`), 0.05)),
+        );
+        if (f.hoehe !== undefined || !f.glaswand) felder.push(h("label", {}, "Höhe"), num(f.hoehe ?? 0.9, (v) => setze((g) => (g.hoehe = v), `${f.id} Höhe`)));
+        if (!f.glaswand) felder.push(h("label", {}, "Drehen"), h("span", {}, h("button", { class: "klein", onclick: () => rechteck(cx, cy, bt, bw) }, "⟳ 90°")));
+      } else if (Array.isArray(f.pos)) {
+        felder.push(h("label", {}, "Position x / y"), h("div", { class: "zwei" },
+          num(f.pos[0], (v) => this.aendern((m) => bauteilVerschieben(m, b, v - f.pos[0], 0), "haus", `${f.id} verschoben`), 0.05),
+          num(f.pos[1], (v) => this.aendern((m) => bauteilVerschieben(m, b, 0, v - f.pos[1]), "haus", `${f.id} verschoben`), 0.05)));
+      }
+      if (String(f.typ).startsWith("gelaender")) {
+        felder.push(h("label", {}, "Höhe Handlauf"), num(f.hoehe ?? 0.9, (v) => setze((g) => (g.hoehe = v), `${f.id} Höhe`)),
+          h("label", {}, "Relingstäbe"), num(f.staebe ?? 4, (v) => setze((g) => (g.staebe = Math.max(0, Math.round(v))), `${f.id} Stäbe`), 1));
+      }
+    } else {
+      const quer = !!f.x;
+      const ber = f.x ?? f.y;
+      felder.push(
+        h("label", {}, "Farbe"), h("div", { class: "zwei" }, h("input", { type: "color", value: f.farbe_hex ?? "#bdb7ad", onchange: (e: Event) => setze((g) => { g.farbe_hex = (e.target as HTMLInputElement).value; g.farbe = g.farbe_hex; }, `${f.id} Farbe`) }),
+          h("input", { value: f.material ?? "", onchange: (e: Event) => setze((g) => (g.material = (e.target as HTMLInputElement).value), `${f.id} Material`) })),
+      );
+      if (ber) felder.push(h("label", {}, `Bereich ${quer ? "x" : "y"} von / bis`), h("div", { class: "zwei" },
+        num(ber[0], (v) => setze((g) => (g[quer ? "x" : "y"] = [v, ber[1]]), `${f.id} Bereich`), 0.05),
+        num(ber[1], (v) => setze((g) => (g[quer ? "x" : "y"] = [ber[0], v]), `${f.id} Bereich`), 0.05)));
+      if (f.z) felder.push(h("label", {}, "Höhe von / bis"), h("div", { class: "zwei" },
+        num(f.z[0], (v) => setze((g) => (g.z = [v, f.z[1]]), `${f.id} Höhe`), 0.05),
+        num(f.z[1], (v) => setze((g) => (g.z = [f.z[0], v]), `${f.id} Höhe`), 0.05)));
+      const einbauten = (this.modell.feste_elemente ?? []).filter((e: any) => e.rechteck || e.pos).map((e: any) => e.id);
+      felder.push(h("label", {}, "Wandert mit"), h("select", { onchange: (e: Event) => setze((g) => { const v = (e.target as HTMLSelectElement).value; if (v) g.gehoert_zu = v; else delete g.gehoert_zu; }, `${f.id} gehört zu`) },
+        h("option", { value: "" }, "–"), ...einbauten.map((id: string) => h("option", { value: id, selected: f.gehoert_zu === id }, id))));
+    }
+    const titel = b.art === "fest" ? (f.name ?? f.id) : `${f.material ?? "Fläche"} · ${f.wand ?? ""} ${f.seite ?? ""}`;
+    p.append(
+      h("div", { class: "kopf" }, h("strong", { class: "titel" }, titel), h("button", { class: "x", onclick: () => this.bauteilWaehlen(null) }, "×")),
+      h("div", { class: "dezent" }, `${b.art === "fest" ? "Einbau" : "Wand-Teilfläche"} · ${f.id}${f.typ ? " · " + f.typ : ""}`),
+      h("div", { class: "raster2" }, ...felder),
+      h("div", { class: "dezent" }, [f.hinweis, f.quelle ? `Quelle: ${f.quelle}` : ""].filter(Boolean).join(" · ")),
+      h("p", { class: "dezent" }, b.art === "fest" ? "Im Plan oder in 3D ziehen (5-cm-Raster, Alt = 1 cm), Pfeiltasten schieben." : "Im Plan oder in 3D entlang der Wand ziehen."),
+      h("div", { class: "zeile" }, h("button", { class: "warn", onclick: () => {
+        if (!confirm(`${titel} aus dem Modell entfernen?`)) return;
+        this.aendern((m) => {
+          if (b.art === "fest") m.feste_elemente = m.feste_elemente.filter((e: any) => e.id !== b.id);
+          else m.oberflaechen.flaechen = m.oberflaechen.flaechen.filter((e: any) => e.id !== b.id);
+        }, "haus", `${b.id} entfernt`);
+        this.bauteilWaehlen(null);
+      } }, "Entfernen")),
     );
   }
 }

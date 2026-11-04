@@ -249,7 +249,7 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
                 le.setdefault("lumen", 3 * 400)
                 le.setdefault("kelvin", 2200)
                 le.setdefault("name", "Pendel Esstisch (3 Leuchten)")
-        vorhandene = {le.get("raum") for le in m["leuchten"] if le.get("typ") == "deckenspot"}
+        vorhandene = {le.get("raum") for le in m["leuchten"] if le.get("typ") != "pendel_cluster"}
         m["leuchten"] += [le for le in standard_leuchten(m) if le["raum"] not in vorhandene]
         meta["leuchten_ergaenzt"] = True
     for le in m["leuchten"]:

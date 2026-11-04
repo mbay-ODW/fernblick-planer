@@ -257,9 +257,13 @@ def oberflaeche_setzen(flaechen: list[dict[str, Any]], standard: dict[str, Any] 
 @mcp.tool(annotations=SCHREIBEN)
 def leuchten_setzen(leuchten: list[dict[str, Any]], notiz: str = "") -> dict[str, Any]:
     """Leuchten anlegen/ändern (nach id). Felder: id, name, typ (deckenspot, pendel, pendel_cluster, wandleuchte,
-    stehleuchte, tischleuchte, led_streifen, strahler), raum, geschoss, pos [x, y], z (Höhe der Lichtquelle über
-    Geschossboden), lumen, kelvin (2200–4000), laenge (nur led_streifen, m), richtung (wandleuchte: N/O/S/W =
-    Wand, an der sie hängt), quelle (z. B. „Lichtplanung 25.05.2026“)."""
+    stehleuchte, tischleuchte, led_streifen, strahler, stromschiene), raum, geschoss, pos [x, y], z (Höhe der Lichtquelle
+    über Geschossboden), lumen (gesamt), kelvin (2200–4000), laenge (nur led_streifen, m), richtung (wandleuchte: N/O/S/W =
+    Wand, an der sie hängt), quelle (z. B. „Lichtplanung 25.05.2026“).
+    Linienleuchten (stromschiene, led_streifen) statt pos über einen Verlauf: an="pfette" mit bereich [y von, y bis];
+    oder wand=<Wand-ID> + seite (Nord/Ost/Süd/West) entlang der Wandoberkante (folgt der Dachschräge), abstand_oben,
+    abstand_wand, bereich [u von, u bis]; oder pfad [[x, y, z], …]. stromschiene: anzahl Spots, abstrahlwinkel (Grad),
+    neigung (0 = senkrecht nach unten, ~0,7 = schräg in den Raum)."""
     def f(m: dict[str, Any]) -> None:
         _upsert(m["leuchten"], leuchten, "id", "l", ersetzen=False)
     return _aendern(f, notiz or f"MCP: {len(leuchten)} Leuchten")

@@ -1,7 +1,7 @@
 // Parametrische Möbel. Lokales System: Mitte der Grundfläche im Ursprung, Breite b entlang X, Tiefe t entlang Z,
 // Front nach +Z (bei rot 0 = Süden), Rückseite −Z, Höhe nach +Y ab Unterkante.
 import * as THREE from "three";
-import { mat, artAusMaterial, leuchtMat } from "./material";
+import { mat, artAusMaterial, leuchtMat, kelvinFarbe } from "./material";
 
 export function farbeVon(m: any): string {
   return m.farbe_hex || "#a0a0a0";
@@ -297,7 +297,7 @@ export function moebelBauen(m: any): MoebelObjekt {
       leuchtflaechen.push(lm);
       const schirm = rund(g, Math.min(w, d) / 2 * 0.9, 0.25, lm, 0, h - 0.125, 0, 32, Math.min(w, d) / 2);
       schirm.castShadow = false;
-      const pl = new THREE.PointLight(0xffffff, 0, 8, 2);
+      const pl = new THREE.PointLight(kelvinFarbe(m.licht?.kelvin ?? 2700), 0, 8, 2);
       pl.position.set(0, h - 0.15, 0);
       pl.userData = { lumen: m.licht?.lumen ?? (typ === "stehleuchte" ? 800 : 400), kelvin: m.licht?.kelvin ?? 2700 };
       g.add(pl);
