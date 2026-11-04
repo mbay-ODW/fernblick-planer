@@ -62,7 +62,7 @@
      "nord": 0.5,
      "sued": 2.0,
      "traufe": 0.0,
-     "hinweis": "traufseitig (Ost/West) kein Überstand (Murat 04.11.2026); Süd = Vordach Terrasse"
+     "hinweis": "traufseitig (Ost/West) kein Überstand (Murat 04.11.2026); Süd = Vordach Terrasse, Seitenwände laufen bis dorthin"
     }
    }
   }
@@ -526,6 +526,40 @@
    "typ": "glasbruestung",
    "hoehe": 1.0,
    "hinweis": "kurzer Schenkel des L bis an den oberen Treppenlauf (Austritt Galerie bleibt offen)",
+   "quelle": "Murat 04.11.2026"
+  },
+  {
+   "id": "EG-AW-W-VORBAU",
+   "geschoss": "EG",
+   "von": [
+    0,
+    11.105
+   ],
+   "bis": [
+    0,
+    13.085
+   ],
+   "dicke": 0.36,
+   "typ": "aussen",
+   "hoehe": 4.0,
+   "hinweis": "Seitenwand läuft unter dem Vordach bis zum Dachende weiter (Innenhof/Terrasse)",
+   "quelle": "Murat 04.11.2026"
+  },
+  {
+   "id": "EG-AW-O-VORBAU",
+   "geschoss": "EG",
+   "von": [
+    7.78,
+    11.105
+   ],
+   "bis": [
+    7.78,
+    13.085
+   ],
+   "dicke": 0.36,
+   "typ": "aussen",
+   "hoehe": 4.0,
+   "hinweis": "Seitenwand läuft unter dem Vordach bis zum Dachende weiter (Innenhof/Terrasse)",
    "quelle": "Murat 04.11.2026"
   }
  ],
@@ -2186,7 +2220,8 @@
     "material": "Aluverbundplatte",
     "farbe": "hellgrau/greige matt",
     "quelle": "Foto Bad",
-    "sicher": false
+    "sicher": false,
+    "gehoert_zu": "bad-dusche"
    },
    {
     "id": "alu-bad-vorwand",
@@ -2219,8 +2254,17 @@
     "material": "Aluverbundplatte",
     "farbe": "hellgrau/greige matt",
     "quelle": "Foto Bad (Spritzschutz hinter Waschtisch)",
-    "sicher": false
+    "sicher": false,
+    "gehoert_zu": "bad-wt"
    }
-  ]
+  ],
+  "fensterbank": {
+   "material": "Holz",
+   "farbe": "Eiche",
+   "farbe_hex": "#b98c55",
+   "dicke": 0.03,
+   "ueberstand": 0.03,
+   "quelle": "Murat 04.11.2026"
+  }
  }
 }

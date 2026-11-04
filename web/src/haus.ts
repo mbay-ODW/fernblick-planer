@@ -183,7 +183,7 @@ export function wandInfos(m: any, M: Masse): WandInfo[] {
     let oben: (u: number) => number;
     const xAt = (u: number) => ax + ux * u;
     if (w.geschoss === "EG") {
-      oben = w.typ === "lamellen" ? () => z0 + (w.hoehe ?? 2.68) : () => M.ogZ;
+      oben = w.typ === "lamellen" ? () => z0 + (w.hoehe ?? 2.68) : w.hoehe ? () => z0 + w.hoehe : () => M.ogZ;
     } else if (w.typ === "kniestock") {
       oben = () => z0 + (w.hoehe ?? M.traufe - M.ogZ);
     } else if (w.typ === "glasbruestung") {
@@ -491,8 +491,13 @@ function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number, m: any
       for (let i = 1; i < felder; i++) mk(p * 1.4, h, 0.09, rahmen, o.u0 + (b * i) / felder, zc);
       glasScheibe(uc, zc, b - p, h - p);
       if (o.typ === "fenster" && o.z0 > w.z0 + 0.3) {
-        // Fensterbank innen
-        mk(b + 0.04, 0.02, 0.2, mat("#e8e4dc", "beton", { name: "Fensterbank" }), uc, o.z0 - 0.01, innen * (w.dicke / 2 - 0.05));
+        // Fensterbank innen (Material/Farbe aus oberflaechen.fensterbank, je Fenster abschaltbar mit fensterbank: false)
+        const fb = { material: "Holz", farbe_hex: "#b98c55", dicke: 0.03, ueberstand: 0.03, ...(m.oberflaechen?.fensterbank ?? {}), ...(typeof o.daten.fensterbank === "object" ? o.daten.fensterbank : {}) };
+        if (o.daten.fensterbank !== false) {
+          const tiefe = w.dicke / 2 + fb.ueberstand;
+          const fbMat = mat(fb.farbe_hex, /holz|eiche/i.test(fb.material) ? "holz" : /stein|beton|marmor/i.test(fb.material) ? "beton" : "glatt", { name: `Fensterbank ${fb.material}` });
+          mk(b + 0.06, fb.dicke, tiefe, fbMat, uc, o.z0 - fb.dicke / 2, (innen * tiefe) / 2);
+        }
       }
     } else if (o.typ === "haustuer") {
       const tb = Math.min(1.05, b * 0.65);
