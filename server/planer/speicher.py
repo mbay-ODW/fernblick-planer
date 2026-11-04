@@ -76,7 +76,7 @@ def modell_lesen(migrieren: bool = True) -> dict[str, Any]:
         m = json.loads(p.read_text())
         if migrieren and int(m.get("meta", {}).get("bibliothek_stand", 1)) < mod.BIBLIOTHEK_STAND:
             # einmalig: neue Katalogvorlagen (z. B. Wandleuchten) ergänzen, als eigene Version
-            m = modell_speichern(m, int(m["meta"].get("version", 1)), "migration", "Katalog: Wandleuchten ergänzt")
+            m = modell_speichern(m, int(m["meta"].get("version", 1)), "migration", "Katalog: neue Vorlagen ergänzt")
         return m
 
 

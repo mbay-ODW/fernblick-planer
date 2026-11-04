@@ -94,10 +94,18 @@ def standard_bibliothek() -> list[dict[str, Any]]:
            licht={"lumen": 800, "kelvin": 2700}),
         _v("tischleuchte", "tischleuchte", "Tischleuchte", 0.25, 0.25, 0.45, "schwarz", "Leuchten",
            licht={"lumen": 400, "kelvin": 2700}),
-    ] + wandleuchten()
+    ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 2
+BIBLIOTHEK_STAND = 3
+
+
+def medien() -> list[dict[str, Any]]:
+    """Wandfernseher (Breite × Tiefe × Höhe, z = Unterkante)."""
+    return [
+        _v("tv-55", "tv", "Fernseher 55\" (Wand)", 1.23, 0.04, 0.71, "schwarz", "Sonstiges", "Kunststoff", z=1.0),
+        _v("tv-65", "tv", "Fernseher 65\" (Wand)", 1.45, 0.04, 0.83, "schwarz", "Sonstiges", "Kunststoff", z=0.95),
+    ]
 
 
 def wandleuchten() -> list[dict[str, Any]]:
@@ -297,7 +305,7 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
     m.setdefault("bibliothek", standard_bibliothek())
     if int(meta.get("bibliothek_stand", 1)) < BIBLIOTHEK_STAND:
         vorhanden = {v.get("vorlage_id") for v in m["bibliothek"]}
-        m["bibliothek"] += [v for v in wandleuchten() if v["vorlage_id"] not in vorhanden]
+        m["bibliothek"] += [v for v in wandleuchten() + medien() if v["vorlage_id"] not in vorhanden]
         meta["bibliothek_stand"] = BIBLIOTHEK_STAND
     m.setdefault("einstellungen", {"breitengrad": 49.654, "laengengrad": 9.077, "datum": "2026-06-21",
                                    "uhrzeit": "17:00", "szenario": "aus", "belichtung": 1.0})

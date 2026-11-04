@@ -220,6 +220,16 @@ export function moebelBauen(m: any): MoebelObjekt {
       if (typ === "regal_niedrig") {
         b(w - 0.04, 0.02, 0.01, fuge, 0, fuss + (h - fuss) / 2, d / 2 + 0.002);
       }
+      // TV-Board: Fernseher an der Wand darüber (Zoll aus tv_zoll oder aus dem Namen, 0 = keiner)
+      if (typ.startsWith("tv_board")) {
+        const zoll = tvZoll(m);
+        if (zoll > 0) fernseher(g, zoll, h + (m.tv_abstand ?? 0.15), -d / 2 + 0.03);
+      }
+      break;
+    }
+    case "tv": {
+      // Wandfernseher: Breite × Höhe aus masse_bth, Unterkante = z
+      fernseher(g, 0, 0, 0, w, h);
       break;
     }
     case "kleiderschrank":
@@ -381,6 +391,30 @@ export function moebelBauen(m: any): MoebelObjekt {
       b(w, h, d, haupt, 0, h / 2, 0);
   }
   return { gruppe: g, lichter, leuchtflaechen };
+}
+
+/** Zoll eines TV-Boards: Feld tv_zoll, sonst aus dem Namen („+ TV 55"“), sonst 55 wenn „TV“ im Namen steht. */
+export function tvZoll(m: any): number {
+  if (m.tv_zoll !== undefined && m.tv_zoll !== null) return Number(m.tv_zoll) || 0;
+  const n = String(m.name ?? "");
+  const t = n.match(/(\d{2,3})\s*(?:"|''|”|zoll)/i);
+  if (t) return Number(t[1]);
+  return /\btv\b|fernseh/i.test(n) ? 55 : 0;
+}
+
+/** Flacher Fernseher 16:9 (schwarzer Rahmen, glänzendes Display); unten = Unterkante, z = Mitte der Tiefe. */
+function fernseher(g: THREE.Group, zoll: number, unten: number, z: number, breite?: number, hoehe?: number) {
+  const diag = zoll * 0.0254;
+  const w = breite ?? diag * 0.8716, h = hoehe ?? diag * 0.4903;
+  const rahmen = mat("#111214", "glatt", { name: "TV Rahmen" });
+  const display = new THREE.MeshStandardMaterial({ name: "TV Display", color: 0x050607, roughness: 0.12, metalness: 0.3 });
+  const k = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.03), rahmen);
+  k.position.set(0, unten + h / 2, z);
+  k.castShadow = true;
+  g.add(k);
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.012, h - 0.012), display);
+  s.position.set(0, unten + h / 2, z + 0.0155);
+  g.add(s);
 }
 
 /** Grundriss-Rechteck (Ecken in Modellkoordinaten) eines Möbels. */

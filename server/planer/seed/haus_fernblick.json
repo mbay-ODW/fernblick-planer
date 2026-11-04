@@ -1917,15 +1917,15 @@
    "typ": "tv_board_haengend",
    "name": "TV-Board hängend 180 + TV 55\"",
    "masse_bth": [
-    0.4,
     1.8,
+    0.4,
     0.35
    ],
    "pos": [
     4.18,
     1.45
    ],
-   "rot_grad": 0,
+   "rot_grad": 270,
    "farbe": "Eiche/schwarz",
    "material": "Holz",
    "verschiebbar": true,

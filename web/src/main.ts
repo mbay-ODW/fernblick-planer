@@ -9,6 +9,7 @@ import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2 } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
+import { tvZoll } from "./moebel";
 import { SCHMAL } from "./geraet";
 
 type Modus = "2d" | "3d" | "render";
@@ -26,8 +27,8 @@ const BODEN_DEKORE: [string, string, string][] = [
   ["Eiche grau", "Klickvinyl", "#a99c8a"], ["Eiche geräuchert", "Klickvinyl", "#7d6248"], ["Nussbaum", "Klickvinyl", "#6b4a33"],
   ["Steinoptik hellgrau", "Fliese", "#c9c4bb"], ["Steinoptik anthrazit", "Fliese", "#5d5b58"], ["Beton-Optik", "Beton", "#a8a49c"],
 ];
-const WANDTYPEN = /^(wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend)/;
-const TYPEN = ["wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
+const WANDTYPEN = /^(wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend|tv$)/;
+const TYPEN = ["tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
   "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
   "kleiderstange", "kommode", "sideboard", "regal_niedrig", "tv_board_haengend", "wandregal", "garderobe_lamellen", "spiegel",
   "spiegel_rund", "bild", "teppich", "pflanze", "stehleuchte", "tischleuchte"];
@@ -1018,6 +1019,7 @@ class App {
         h("label", {}, "Farbe"), h("div", { class: "zwei" }, h("input", { type: "color", value: x.farbe_hex ?? "#a0a0a0", onchange: (e: Event) => setze("farbe_hex", (e.target as HTMLInputElement).value) }),
           h("input", { value: x.farbe ?? "", placeholder: "Farbname", onchange: (e: Event) => setze("farbe", (e.target as HTMLInputElement).value) })),
         h("label", {}, "Material"), h("input", { value: x.material ?? "", onchange: (e: Event) => setze("material", (e.target as HTMLInputElement).value) }),
+        ...(String(x.typ).startsWith("tv_board") ? [h("label", {}, "TV Zoll (0 = keiner)"), num(tvZoll(x), (v) => setze("tv_zoll", Math.max(0, Math.round(v)), `${x.name}: TV ${Math.round(v)}"`), 1)] : []),
         ...(x.licht ? [
           h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },
             num(x.licht.kelvin ?? 2700, (v) => setze("licht", { ...x.licht, kelvin: Math.round(v) }, `${x.name}: ${Math.round(v)} K`), 100),
