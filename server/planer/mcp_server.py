@@ -6,12 +6,15 @@ automatisch nach.
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import copy
 import json
+import logging
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from starlette.types import Receive, Scope, Send
@@ -40,13 +43,23 @@ plausiblen Maßen (Standardmaße, Herstellerangaben) anlegen, quelle angeben, Ko
 Küche und Türen vermeiden. Vor größeren Umbauten variante_speichern, damit der alte Stand erhalten bleibt.
 Feste Elemente (Treppe, Küche, Bad-Objekte, Lamellenwand) nur ändern, wenn der Benutzer es ausdrücklich will."""
 
-mcp = FastMCP("fernblick-planer", instructions=ANLEITUNG, stateless_http=True, json_response=True,
-              streamable_http_path="/mcp",
-              transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
+class KlartextServer(MCPServer):
+    """mcp 2.x verbirgt den Text unerwarteter Exceptions vor dem Client ("Error executing tool X").
+    Die Tools hier melden ihre Fehler so ans Modell, daher bleibt der Text wie in mcp 1.x erhalten."""
 
-LESEN = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
-SCHREIBEN = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
-LOESCHEN = ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=False)
+    async def call_tool(self, name, arguments, context=None):  # type: ignore[no-untyped-def]
+        try:
+            return await super().call_tool(name, arguments, context)
+        except UnexpectedToolError as exc:
+            logging.getLogger("mcp.server.mcpserver").exception("Tool %r raised an unexpected exception", name)
+            raise ToolError(f"{exc}: {exc.__cause__}") from exc.__cause__
+
+
+mcp = KlartextServer("fernblick-planer", instructions=ANLEITUNG)
+
+LESEN = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+SCHREIBEN = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
+LOESCHEN = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False)
 
 SAMMLUNGEN = ("raeume", "waende", "oeffnungen", "feste_elemente", "moebel", "leuchten", "ansichten", "szenarien",
               "bibliothek")
@@ -422,10 +435,13 @@ class McpEndpunkt:
 
 
 def session_manager_starten():  # type: ignore[no-untyped-def]
-    mcp._session_manager = None
-    mcp.streamable_http_app()
+    # streamable_http_app() legt je Aufruf einen neuen Session-Manager an (run() geht nur einmal je Instanz);
+    # die App selbst wird nicht verwendet
+    mcp.streamable_http_app(stateless_http=True, json_response=True, streamable_http_path="/mcp",
+                            transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
     return mcp.session_manager.run()
 
 
 def werkzeuge() -> list[str]:
-    return sorted(t.name for t in mcp._tool_manager.list_tools())
+    # nur aus sync Kontext (Health im Threadpool, CLI), dort läuft keine Event-Loop
+    return sorted(t.name for t in asyncio.run(mcp.list_tools()))
