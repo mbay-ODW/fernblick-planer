@@ -25,7 +25,7 @@ FARBEN: dict[str, str] = {
     "cremegrau": "#cfc8bb", "salbei": "#9eae86", "terrakotta": "#b8694a", "blau": "#4a6a8a", "rost": "#9c5a34",
 }
 
-ORIENTIERT_WAND = {"sofa", "ecksofa", "bett", "bett_einzel", "kleiderschrank", "schrank", "regal", "regal_niedrig",
+ORIENTIERT_WAND = {"sofa", "ecksofa", "bett", "bett_einzel", "tagesbett", "kleiderschrank", "schrank", "regal", "regal_niedrig",
                    "tv_board_haengend", "tv_board", "nachttisch", "nachttisch_haengend", "sessel", "schuhbank",
                    "garderobe_lamellen", "wandregal", "spiegel", "spiegel_rund", "sideboard", "kommode",
                    "schreibtisch"}
@@ -68,6 +68,10 @@ def standard_bibliothek() -> list[dict[str, Any]]:
         _v("bett-160", "bett", "Doppelbett 160×200", 1.70, 2.10, 1.05, "beige", "Liegen", "Polster"),
         _v("bett-90", "bett_einzel", "Einzelbett 90×200", 0.97, 2.06, 0.45, "beige", "Liegen"),
         _v("brimnes", "bett_einzel", "Tagesbett BRIMNES 80×200", 0.87, 2.06, 0.45, "beige", "Liegen"),
+        _v("brimnes-tagesbett", "tagesbett", "IKEA BRIMNES Tagesbett mit 2 Schubladen, weiß", 2.06, 0.87, 0.6, "weiß", "Liegen",
+           "Spanplatte weiß", schubladen=2),
+        _v("idanaes-180", "bett", "IKEA IDANÄS Polsterbett 180×200 mit Schubladen", 1.90, 2.23, 1.21, "#cfc3a8", "Liegen",
+           "Polster beige", beine=0.13, rahmen_hoehe=0.49, schubladen=2, knoepfe=True),
         _v("schlafsofa", "sofa", "Schlafsofa 200", 2.00, 0.95, 0.85, "anthrazit", "Liegen", "Stoff"),
         _v("kleiderschrank-150", "kleiderschrank", "Kleiderschrank 150", 1.50, 0.60, 2.00, "weiß/eiche", "Stauraum"),
         _v("kleiderschrank-100", "kleiderschrank", "Kleiderschrank 100", 1.00, 0.60, 2.00, "weiß", "Stauraum"),
@@ -98,7 +102,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 8
+BIBLIOTHEK_STAND = 9
 
 
 def ecksofas() -> list[dict[str, Any]]:

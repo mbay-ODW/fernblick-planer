@@ -295,24 +295,94 @@ export function moebelBauen(m: any): MoebelObjekt {
     }
     case "bett":
     case "bett_einzel": {
-      // Kopfteil: bei langen Betten quer (b > t) am −X-Ende, sonst an der Rückseite
+      // Kopfteil: bei langen Betten quer (b > t) am −X-Ende, sonst an der Rückseite.
+      // Optional: beine (Fußhöhe, Holzfüße sichtbar), rahmen_hoehe (Oberkante Bettkasten), schubladen (je Längsseite),
+      // knoepfe (gepolstertes Kopfteil mit Knopfheftung), beine_farbe
       const quer = w > d * 1.3;
-      const rahmenH = 0.28, matr = 0.2;
+      const fuss = Number(m.beine) || 0;
+      const rahmenOben = Number(m.rahmen_hoehe) || 0.06 + 0.28;
+      const rahmenU = fuss || 0.06, rahmenH = rahmenOben - rahmenU, matr = 0.2;
       const holzM = mat(heller(farbe, 0.85), artAusMaterial(m.material, "polster"));
-      b(w, rahmenH, d, holzM, 0, 0.06 + rahmenH / 2, 0);
-      b(w - 0.06, 0.06, d - 0.06, dunkel, 0, 0.03, 0);
-      b(w - 0.06, matr, d - 0.06, mat("#f3f1ec", "stoff", { name: "Matratze" }), 0, 0.06 + rahmenH + matr / 2 - 0.05, 0);
+      b(w, rahmenH, d, holzM, 0, rahmenU + rahmenH / 2, 0);
+      if (fuss) {
+        const beinM = mat(m.beine_farbe ?? "#c9a06a", "holz", { name: "Bettfuß" });
+        const lang = quer ? w : d, breit = quer ? d : w;
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+          const x = quer ? sx * (lang / 2 - 0.08) : sx * (breit / 2 - 0.08), z = quer ? sz * (breit / 2 - 0.08) : sz * (lang / 2 - 0.08);
+          rund(g, 0.022, fuss, beinM, x, fuss / 2, z, 12, 0.016);
+        }
+      } else b(w - 0.06, 0.06, d - 0.06, dunkel, 0, 0.03, 0);
+      // Schubladenfugen an den Längsseiten
+      const nS = Math.round(Number(m.schubladen) || 0);
+      if (nS > 0) {
+        const fuge = mat("#3a3632", "glatt", { name: "Fuge" });
+        const lang = quer ? w : d;
+        const kopf = 0.12, nutz = lang - kopf - 0.1;
+        for (const s2 of [-1, 1]) for (let i2 = 0; i2 <= nS; i2++) {
+          const u = -lang / 2 + kopf + (nutz * i2) / nS;
+          const yy = rahmenU + rahmenH * 0.45;
+          if (quer) b(0.006, rahmenH * 0.8, 0.004, fuge, u, yy, s2 * (d / 2 + 0.002));
+          else b(0.004, rahmenH * 0.8, 0.006, fuge, s2 * (w / 2 + 0.002), yy, u);
+        }
+        const lA = quer ? nutz : 0.004, lB = quer ? 0.004 : nutz;
+        for (const s2 of [-1, 1]) {
+          const yy = rahmenU + rahmenH * 0.05 + 0.02;
+          if (quer) b(lA, 0.004, 0.004, fuge, -lang / 2 + kopf + nutz / 2, yy + rahmenH * 0.8, s2 * (d / 2 + 0.002));
+          else b(lA, 0.004, lB, fuge, s2 * (w / 2 + 0.002), yy + rahmenH * 0.8, -lang / 2 + kopf + nutz / 2);
+        }
+      }
+      const mOben = rahmenOben - 0.08 + matr;
+      b(w - 0.06, matr, d - 0.06, mat("#f3f1ec", "stoff", { name: "Matratze" }), 0, mOben - matr / 2, 0);
       const decke = mat(heller(farbe, 1.1), "stoff", { name: "Bettdecke" });
       const kopfH = Math.max(h, 0.75);
+      const knopfM = mat(heller(farbe, 0.75), "stoff", { name: "Knopf" });
       if (quer) {
         b(0.08, kopfH, d, holzM, -w / 2 + 0.04, kopfH / 2, 0);
-        b(w * 0.62, 0.06, d - 0.04, decke, w * 0.17, 0.06 + rahmenH + matr - 0.02, 0);
-        b(0.4, 0.12, d - 0.2, kissen, -w / 2 + 0.3, 0.06 + rahmenH + matr + 0.03, 0);
+        b(w * 0.62, 0.06, d - 0.04, decke, w * 0.17, mOben - 0.02, 0);
+        b(0.4, 0.12, d - 0.2, kissen, -w / 2 + 0.3, mOben + 0.05, 0);
       } else {
-        b(w, kopfH, 0.08, holzM, 0, kopfH / 2, -d / 2 + 0.04);
-        b(w - 0.04, 0.06, d * 0.62, decke, 0, 0.06 + rahmenH + matr - 0.02, d * 0.17);
+        const kt = m.knoepfe ? 0.12 : 0.08;
+        b(w, kopfH, kt, holzM, 0, kopfH / 2, -d / 2 + kt / 2);
+        if (m.knoepfe) {
+          // zwei versetzte Knopfreihen im oberen Kopfteil
+          for (let r = 0; r < 2; r++) {
+            const n = r === 0 ? 5 : 4, yy = kopfH - 0.18 - r * 0.12;
+            for (let k = 0; k < n; k++) {
+              const x = -w / 2 + (w * (k + (r === 0 ? 0.5 : 1))) / (r === 0 ? n : n + 1);
+              const kn = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), knopfM);
+              kn.position.set(x, yy, -d / 2 + kt + 0.002);
+              g.add(kn);
+            }
+          }
+        }
+        b(w - 0.04, 0.06, d * 0.62, decke, 0, mOben - 0.02, d * 0.17);
         const nK = w > 1.2 ? 2 : 1;
-        for (let i = 0; i < nK; i++) b(w / nK - 0.15, 0.12, 0.4, kissen, -w / 2 + (w / nK) * (i + 0.5), 0.06 + rahmenH + matr + 0.03, -d / 2 + 0.32);
+        for (let i3 = 0; i3 < nK; i3++) b(w / nK - 0.15, 0.12, 0.4, kissen, -w / 2 + (w / nK) * (i3 + 0.5), mOben + 0.05, -d / 2 + kt + 0.24);
+      }
+      break;
+    }
+    case "tagesbett": {
+      // Tagesbett (z. B. BRIMNES): Kasten mit Schubladen vorn (+Z), Seitenteile an den Enden, zwei Matratzen,
+      // Kissen an der Rückseite; Breite = Länge des Betts (rot 0: Rückseite zur Wand)
+      const sock = 0.04, kasten = Number(m.kasten_hoehe) || 0.36, sw = 0.03;
+      b(w - 2 * sw, kasten, d - 0.02, haupt, 0, sock + kasten / 2, -0.01);
+      b(w - 2 * sw - 0.02, sock, d - 0.06, haupt, 0, sock / 2, -0.03);
+      for (const sx of [-1, 1]) b(sw, h, d, haupt, sx * (w / 2 - sw / 2), h / 2, 0);
+      const nS = Math.max(1, Math.round(Number(m.schubladen) || 2));
+      const fb = (w - 2 * sw - 0.02 - (nS - 1) * 0.006) / nS;
+      const griffM = mat(m.griff_farbe ?? heller(farbe, 0.92), "glatt", { name: "Griff" });
+      for (let i4 = 0; i4 < nS; i4++) {
+        const x = -w / 2 + sw + 0.01 + fb / 2 + i4 * (fb + 0.006);
+        b(fb, kasten - 0.04, 0.018, haupt, x, sock + 0.02 + (kasten - 0.04) / 2, d / 2 - 0.009 + 0.004);
+        b(0.12, 0.018, 0.025, griffM, x, sock + kasten - 0.07, d / 2 + 0.012);
+      }
+      const matrM = mat("#f3f1ec", "stoff", { name: "Matratze" });
+      const mU = sock + kasten;
+      b(w - 2 * sw - 0.01, 0.1, d - 0.08, matrM, 0, mU + 0.05, 0);
+      b(w - 2 * sw - 0.01, 0.1, d - 0.08, matrM, 0, mU + 0.15, 0);
+      for (let i5 = 0; i5 < 3; i5++) {
+        const k = b(0.48, 0.42, 0.14, kissen, -w * 0.25 + i5 * w * 0.25, mU + 0.2 + 0.21, -d / 2 + 0.1);
+        k.rotation.x = -0.18;
       }
       break;
     }
