@@ -173,6 +173,28 @@ export function moebelBauen(m: any): MoebelObjekt {
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) b(0.03, 0.012, 0.03, dunkel, sx * (w / 2 - 0.03), 0.006, sz * (d / 2 - 0.05));
       break;
     }
+    case "waschmaschinen_unterbau": {
+      // Unterbau mit Arbeitsplatte: offene Nische (nische_breite) für die Maschine, daneben schmaler Schrank mit Tür
+      // und Böden; nische "links"/"rechts" (von vorn), platte_farbe für die Arbeitsplatte
+      const t = 0.018, pt = Number(m.platte_staerke) || 0.03;
+      const nb = Math.min(w - 0.12, Number(m.nische_breite) || 0.65);
+      const s = m.nische === "rechts" ? -1 : 1; // +1: Nische links, Schrank rechts
+      const xN0 = -w / 2 * s, kh = h - pt;
+      const platte = mat(m.platte_farbe ?? "#c49a64", "holz", { name: "Arbeitsplatte Eiche" });
+      b(w, pt, d, platte, 0, h - pt / 2, 0);
+      // Außenwand Nischenseite, Mittelwand, Außenwand Schrankseite
+      b(t, kh, d - 0.01, haupt, xN0 + s * t / 2, kh / 2, -0.005);
+      const xM = xN0 + s * (t + nb + t / 2);
+      b(t, kh, d - 0.01, haupt, xM, kh / 2, -0.005);
+      b(t, kh, d - 0.01, haupt, -xN0 - s * t / 2, kh / 2, -0.005);
+      // Rückwand Nische (zwei Querriegel), Schrankkorpus mit Boden, Rückwand, Böden
+      for (const yy of [0.1, kh - 0.42]) b(nb, 0.08, t, haupt, xN0 + s * (t + nb / 2), yy, -d / 2 + t / 2);
+      const sb = w - nb - 3 * t, xS = (xM + (-xN0 - s * t)) / 2;
+      b(sb, kh, t, haupt, xS, kh / 2, -d / 2 + t / 2);
+      for (const yy of [0.04, 0.04 + 0.275 + t, 0.04 + 2 * (0.275 + t)]) b(sb, t, d - 0.04, haupt, xS, yy + t / 2, -0.02);
+      b(sb + 2 * t - 0.004, kh - 0.01, t, haupt, xS, kh / 2 + 0.005, d / 2 - t / 2 + 0.002);
+      break;
+    }
     case "mehrzweckschrank": {
       // Hochschrank mit zwei Türen übereinander und durchgehender Griffmulde (teilung = Höhe der Mulde über Boden)
       const sockel = 0.05, mulde = 0.03;

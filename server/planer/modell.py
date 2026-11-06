@@ -98,7 +98,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 7
+BIBLIOTHEK_STAND = 8
 
 
 def ecksofas() -> list[dict[str, Any]]:
@@ -126,6 +126,9 @@ def haushalt() -> list[dict[str, Any]]:
         _v("waschmaschinenschrank", "waschmaschinenschrank", "Waschmaschinenschrank Überbau Kaschmir (Maße prüfen)", 0.70,
            0.675, 1.00, "#d8cdc5", "Stauraum", "Holzwerkstoff, grifflos", tueren=2,
            quelle="XXXLutz (Maße geschätzt, Tiefe wie Xora 67,5 cm)"),
+        _v("waschmaschinen-unterbau", "waschmaschinen_unterbau", "Waschmaschinen-Unterbau 93,5 Eichenplatte + Seitenschrank",
+           0.935, 0.60, 0.885, "weiß", "Stauraum", "Holzwerkstoff weiß, Platte Eiche-Dekor", nische_breite=0.65,
+           nische="links", platte_farbe="#c49a64", quelle="Produktbild Murat 06.11.2026: 93,5×60×88,5, Nische 65, Fach 24"),
         _v("haengeschrank-glatt", "haengeschrank", "Hängeschrank glatt 40×30×70", 0.40, 0.30, 0.70, "weiß",
            "Stauraum", "MDF matt", z=1.2),
         _v("haengeschrank-bad-2t-offen", "haengeschrank", "Bad-Hängeschrank 2 Türen + offene Fächer 56×25×75", 0.56, 0.25,

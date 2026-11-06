@@ -57,7 +57,7 @@ export function pruefen(m: any): Hinweis[] {
       if (a.geschoss !== b.geschoss) continue;
       // Gerät im Überbauschrank ist gewollt
       const typen = [a.typ, b.typ];
-      if (typen.includes("waschmaschinenschrank") && typen.some((t) => t === "waschmaschine" || t === "trockner")) continue;
+      if ((typen.includes("waschmaschinenschrank") || typen.includes("waschmaschinen_unterbau")) && typen.some((t) => t === "waschmaschine" || t === "trockner")) continue;
       const [b0, b1] = zBereich(b, M.ogZ);
       if (a1 <= b0 + 0.01 || b1 <= a0 + 0.01) continue;
       const d = tiefe(poly.get(a.id)!, poly.get(b.id)!);

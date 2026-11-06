@@ -110,7 +110,8 @@ def _upsert(liste: list[dict[str, Any]], eintraege: list[dict[str, Any]], key: s
 # ---------------------------------------------------------------------------
 # Felder, die beim Einfügen/Tauschen aus einer Bibliotheksvorlage übernommen werden
 VORLAGE_FELDER = ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", "z", "licht", "preis_eur", "recamiere",
-                  "front", "griff", "tueren", "offen_unten", "teilung")
+                  "front", "griff", "tueren", "offen_unten", "teilung",
+                  "nische_breite", "nische", "platte_farbe")
 
 @mcp.tool(annotations=LESEN)
 def planer_ueberblick() -> dict[str, Any]:
@@ -173,7 +174,8 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     garderobe_lamellen, teppich, spiegel, spiegel_rund, bild, pflanze, stehleuchte, tischleuchte, waschmaschine, trockner,
     apothekerschrank, haengeschrank (front riffel/glatt, griff links/rechts/ohne,
     tueren 1/2, offen_unten = Höhe offener Fächer in m), waschmaschinenschrank (tueren),
-    mehrzweckschrank (teilung = Höhe der Griffmulde in m); andere Typen
+    mehrzweckschrank (teilung = Höhe der Griffmulde in m),
+    waschmaschinen_unterbau (nische_breite, nische links/rechts, platte_farbe); andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}
