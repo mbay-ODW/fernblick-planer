@@ -98,7 +98,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 6
+BIBLIOTHEK_STAND = 7
 
 
 def ecksofas() -> list[dict[str, Any]]:
@@ -120,6 +120,12 @@ def haushalt() -> list[dict[str, Any]]:
            "Stauraum", "Holz lackiert"),
         _v("haengeschrank-bad-riffel", "haengeschrank", "Bad-Hängeschrank geriffelt 35×27×68", 0.35, 0.272, 0.68,
            "#c8bcae", "Stauraum", "MDF matt, Knauf Messing", z=1.2, front="riffel", griff="links"),
+        _v("xora-mehrzweckschrank", "mehrzweckschrank", "Xora Mehrzweckschrank 50/210/67,5 Kaschmir", 0.50, 0.675, 2.10,
+           "#d8cdc5", "Stauraum", "Holzwerkstoff, grifflos (Griffmulde)", teilung=1.30, preis_eur=229,
+           quelle="XXXLutz Art. 0003011421 (Aktion 229 €, sonst 551 €)"),
+        _v("waschmaschinenschrank", "waschmaschinenschrank", "Waschmaschinenschrank Überbau Kaschmir (Maße prüfen)", 0.70,
+           0.675, 1.00, "#d8cdc5", "Stauraum", "Holzwerkstoff, grifflos", tueren=2,
+           quelle="XXXLutz (Maße geschätzt, Tiefe wie Xora 67,5 cm)"),
         _v("haengeschrank-glatt", "haengeschrank", "Hängeschrank glatt 40×30×70", 0.40, 0.30, 0.70, "weiß",
            "Stauraum", "MDF matt", z=1.2),
         _v("haengeschrank-bad-2t-offen", "haengeschrank", "Bad-Hängeschrank 2 Türen + offene Fächer 56×25×75", 0.56, 0.25,

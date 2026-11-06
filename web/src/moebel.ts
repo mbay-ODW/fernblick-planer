@@ -161,6 +161,31 @@ export function moebelBauen(m: any): MoebelObjekt {
       }
       break;
     }
+    case "waschmaschinenschrank": {
+      // Überbauschrank für Frontlader: Seiten, Deckplatte, zwei Türen, unten und hinten offen
+      const t = 0.018;
+      b(t, h - t, d - 0.02, haupt, -w / 2 + t / 2, (h - t) / 2, -0.01);
+      b(t, h - t, d - 0.02, haupt, w / 2 - t / 2, (h - t) / 2, -0.01);
+      b(w + 0.006, t, d, haupt, 0, h - t / 2, 0);
+      const nT = Math.max(1, Math.round(Number(m.tueren) || 2)), fuge = 0.003;
+      const bw = (w - (nT - 1) * fuge) / nT;
+      for (let i = 0; i < nT; i++) b(bw - 0.002, h - t - 0.02, 0.018, haupt, -w / 2 + bw / 2 + i * (bw + fuge), 0.02 + (h - t - 0.02) / 2, d / 2 - 0.009);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) b(0.03, 0.012, 0.03, dunkel, sx * (w / 2 - 0.03), 0.006, sz * (d / 2 - 0.05));
+      break;
+    }
+    case "mehrzweckschrank": {
+      // Hochschrank mit zwei Türen übereinander und durchgehender Griffmulde (teilung = Höhe der Mulde über Boden)
+      const sockel = 0.05, mulde = 0.03;
+      const teil = Math.min(h - 0.2, Math.max(0.2, Number(m.teilung) || h * 0.62));
+      b(w - 0.02, sockel, d - 0.04, mat("#2a2a2a", "glatt", { name: "Sockel" }), 0, sockel / 2, -0.02);
+      b(w, h - sockel, d - 0.02, haupt, 0, sockel + (h - sockel) / 2, -0.01);
+      const unten = teil - sockel - 0.002, oben = h - teil - mulde - 0.002;
+      b(w - 0.004, unten, 0.019, haupt, 0, sockel + unten / 2, d / 2 - 0.0095);
+      b(w - 0.004, oben, 0.019, haupt, 0, teil + mulde + oben / 2, d / 2 - 0.0095);
+      // Griffmulde: zurückgesetzte, etwas dunklere Leiste
+      b(w - 0.004, mulde, 0.01, mat(farbe, "glatt", { name: "Griffmulde" }), 0, teil + mulde / 2, d / 2 - 0.03);
+      break;
+    }
     case "apothekerschrank": {
       // schmaler Hochschrank mit einem Vollauszug; Griffleiste oben, Sockel zurückgesetzt
       const sockel = 0.06;
