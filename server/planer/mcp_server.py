@@ -114,7 +114,7 @@ VORLAGE_FELDER = ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", 
                   "nische_breite", "nische", "platte_farbe",
                   "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand",
                   "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe",
-                  "rueckenkissen", "zierkissen")
+                  "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme")
 
 @mcp.tool(annotations=LESEN)
 def planer_ueberblick() -> dict[str, Any]:
@@ -182,7 +182,8 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     bett (beine, rahmen_hoehe, schubladen je Seite, knoepfe), tagesbett (schubladen, kasten_hoehe),
     faecherregal (faecher_x, faecher_y, rueckwand; z. B. KALLAX),
     schreibtisch_container (container links/rechts, container_breite, schubladen, kante_farbe; z. B. LAGKAPTEN/ALEX),
-    ecksofa_kissen (recamiere, beine, rueckenkissen, zierkissen; z. B. CARRYHOME); andere Typen
+    ecksofa_kissen (recamiere, beine, rueckenkissen, zierkissen; z. B. CARRYHOME),
+    ecksofa (recamiere, beine, arm_breite, sitztiefe, arme "beide"); Recamiere standardmäßig rechts. andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}

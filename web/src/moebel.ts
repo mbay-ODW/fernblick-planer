@@ -89,12 +89,17 @@ export function moebelBauen(m: any): MoebelObjekt {
       // L-Form: Lehne entlang der Rückseite, Recamiere über die ganze Tiefe –
       // von vorn gesehen rechts (+X, Standard) oder links (recamiere: "links" spiegelt in X)
       const sx = recamiereLinks(m) ? -1 : 1;
-      const sitzT = Math.min(0.95, d * 0.6), sitz = 0.44, lehne = Math.max(0.75, h * 0.85), arm = 0.16;
+      // optional: beine (Füße, Polster darüber), arm_breite, sitztiefe (Tiefe des Sitzteils ohne Recamiere)
+      const fussE = Number(m.beine) || 0, startE = g.children.length;
+      const sitzT = Math.min(d - 0.2, Number(m.sitztiefe) || Math.min(0.95, d * 0.6)), sitz = 0.44 - fussE * 0.6;
+      const lehne = Math.max(0.75, h * 0.85) - fussE, arm = Number(m.arm_breite) || 0.16;
       const rb = Math.min(1.0, w * 0.38);
       polster(b, w, sitz, sitzT, stoff, 0, sitz / 2, -d / 2 + sitzT / 2);
       polster(b, rb, sitz, d - sitzT, stoff, sx * (w / 2 - rb / 2), sitz / 2, -d / 2 + sitzT + (d - sitzT) / 2);
       polster(b, w, lehne, 0.2, stoff, 0, lehne / 2, -d / 2 + 0.1);
-      polster(b, arm, 0.62, sitzT, stoff, sx * (-w / 2 + arm / 2), 0.31, -d / 2 + sitzT / 2);
+      polster(b, arm, 0.62 - fussE * 0.6, sitzT, stoff, sx * (-w / 2 + arm / 2), (0.62 - fussE * 0.6) / 2, -d / 2 + sitzT / 2);
+      // Armlehne auch auf der Recamiere-Seite (arme: "beide"), über die Sitztiefe des Sofas
+      if (m.arme === "beide") polster(b, arm, 0.62 - fussE * 0.6, sitzT, stoff, sx * (w / 2 - arm / 2), (0.62 - fussE * 0.6) / 2, -d / 2 + sitzT / 2);
       const n = Math.max(2, Math.round((w - rb - arm) / 0.7));
       const kb = (w - rb - arm) / n;
       for (let i = 0; i < n; i++) {
@@ -104,6 +109,13 @@ export function moebelBauen(m: any): MoebelObjekt {
       }
       polster(b, rb - 0.04, 0.1, d - 0.3, kissen, sx * (w / 2 - rb / 2), sitz + 0.05, 0.1);
       polster(b, rb - 0.06, 0.42, 0.14, kissen, sx * (w / 2 - rb / 2), sitz + 0.23, -d / 2 + 0.27);
+      if (fussE) {
+        for (let i = startE; i < g.children.length; i++) g.children[i].position.y += fussE;
+        const beinM = mat(m.beine_farbe ?? "#b8b4ac", "metall", { name: "Sofafuß" });
+        const pts: [number, number][] = [[sx * (-w / 2 + 0.06), -d / 2 + 0.06], [sx * (-w / 2 + 0.06), -d / 2 + sitzT - 0.06],
+          [sx * (w / 2 - 0.06), -d / 2 + 0.06], [sx * (w / 2 - 0.06), d / 2 - 0.06], [sx * (w / 2 - rb + 0.06), d / 2 - 0.06]];
+        for (const [x, z] of pts) rund(g, 0.02, fussE, beinM, x, fussE / 2, z, 12);
+      }
       break;
     }
     case "ecksofa_kissen": {
@@ -706,7 +718,7 @@ export function recamiereLinks(m: any): boolean {
 export function fussflaechen(m: any): [number, number][][] {
   if (m.typ !== "ecksofa" && m.typ !== "ecksofa_kissen") return [ecken(m)];
   const [w, d] = m.masse_bth ?? [2.5, 1.6];
-  const sitzT = Math.min(0.95, d * 0.6), rb = Math.min(1.0, w * 0.38);
+  const sitzT = Math.min(d - 0.2, Number(m.sitztiefe) || Math.min(0.95, d * 0.6)), rb = Math.min(1.0, w * 0.38);
   const a = ((m.rot_grad ?? 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
   const rechteck = (x0: number, y0: number, x1: number, y1: number): [number, number][] =>
     [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => [m.pos[0] + x * c - y * s, m.pos[1] + x * s + y * c]);

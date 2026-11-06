@@ -115,18 +115,22 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 12
+BIBLIOTHEK_STAND = 14
 
 
 def ecksofas() -> list[dict[str, Any]]:
     """Ecksofa mit Recamiere rechts bzw. links (von vorn gesehen)."""
     return [
         _v("carryhome-ecksofa-gruen", "ecksofa_kissen", "CARRYHOME Ecksofa Cord Dunkelgrün (Bettkasten)", 2.84, 1.62, 0.95,
-           "#1f453b", "Sitzen", "Cord", recamiere="links", beine=0.12, rueckenkissen=5, zierkissen=2, preis_eur=899,
+           "#1f453b", "Sitzen", "Cord", recamiere="rechts", beine=0.12, rueckenkissen=5, zierkissen=2, preis_eur=899,
            quelle="XXXLutz Art. 0812010305"),
         _v("carryhome-ecksofa-taupe", "ecksofa_kissen", "CARRYHOME Ecksofa Cord Taupe (Bettkasten)", 2.84, 1.62, 0.95,
-           "#8a7c6c", "Sitzen", "Cord", recamiere="links", beine=0.12, rueckenkissen=5, zierkissen=2, preis_eur=899,
+           "#8a7c6c", "Sitzen", "Cord", recamiere="rechts", beine=0.12, rueckenkissen=5, zierkissen=2, preis_eur=899,
            quelle="XXXLutz Art. 0812010304"),
+        _v("ikea-landskrona-recamiere", "ecksofa", "IKEA LANDSKRONA 3er-Sofa mit Récamiere", 2.33, 1.32, 0.89, "#d9d1c0",
+           "Sitzen", "Stoff beige", recamiere="rechts", beine=0.16, arm_breite=0.13, sitztiefe=0.88, arme="beide",
+           beine_farbe="#1a1a1a",
+           quelle="IKEA-Maßbild Murat 06.11.2026: 233×88, Récamiere 132, H 89, Sitz 45, Füße 16"),
         _v("ecksofa-recamiere-rechts", "ecksofa", "Ecksofa Recamiere rechts", 2.84, 1.62, 0.85, "greige", "Sitzen", "Stoff",
            recamiere="rechts"),
         _v("ecksofa-recamiere-links", "ecksofa", "Ecksofa Recamiere links", 2.84, 1.62, 0.85, "greige", "Sitzen", "Stoff",
