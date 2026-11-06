@@ -112,7 +112,8 @@ def _upsert(liste: list[dict[str, Any]], eintraege: list[dict[str, Any]], key: s
 VORLAGE_FELDER = ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", "z", "licht", "preis_eur", "recamiere",
                   "front", "griff", "tueren", "offen_unten", "teilung",
                   "nische_breite", "nische", "platte_farbe",
-                  "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe")
+                  "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand",
+                  "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe")
 
 @mcp.tool(annotations=LESEN)
 def planer_ueberblick() -> dict[str, Any]:
@@ -177,7 +178,9 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     tueren 1/2, offen_unten = Höhe offener Fächer in m), waschmaschinenschrank (tueren),
     mehrzweckschrank (teilung = Höhe der Griffmulde in m),
     waschmaschinen_unterbau (nische_breite, nische links/rechts, platte_farbe),
-    bett (beine, rahmen_hoehe, schubladen je Seite, knoepfe), tagesbett (schubladen, kasten_hoehe); andere Typen
+    bett (beine, rahmen_hoehe, schubladen je Seite, knoepfe), tagesbett (schubladen, kasten_hoehe),
+    faecherregal (faecher_x, faecher_y, rueckwand; z. B. KALLAX),
+    schreibtisch_container (container links/rechts, container_breite, schubladen, kante_farbe; z. B. LAGKAPTEN/ALEX); andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}

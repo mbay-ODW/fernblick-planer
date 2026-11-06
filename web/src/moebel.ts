@@ -250,6 +250,27 @@ export function moebelBauen(m: any): MoebelObjekt {
       g.add(s);
       break;
     }
+    case "schreibtisch_container": {
+      // Schreibtisch mit Schubladenelement (z. B. LAGKAPTEN/ALEX): Platte mit Kante, Container links/rechts,
+      // zwei Rundbeine auf der anderen Seite
+      const pt = 0.025, cw = Number(m.container_breite) || 0.36, sx = m.container === "rechts" ? 1 : -1;
+      const platteM = mat(farbe, "glatt", { name: "Tischplatte" });
+      const kante = mat(m.kante_farbe ?? "#c9a875", "holz", { name: "Kante" });
+      b(w, pt, d, platteM, 0, h - pt / 2, 0);
+      b(w + 0.002, pt - 0.004, 0.003, kante, 0, h - pt / 2, d / 2 + 0.001);
+      b(w + 0.002, pt - 0.004, 0.003, kante, 0, h - pt / 2, -d / 2 - 0.001);
+      for (const s7 of [-1, 1]) b(0.003, pt - 0.004, d, kante, s7 * (w / 2 + 0.001), h - pt / 2, 0);
+      const cM = mat(m.container_farbe ?? farbe, "glatt", { name: "Container" });
+      const ch = h - pt, cx = sx * (w / 2 - cw / 2 - 0.01);
+      b(cw, ch - 0.01, d - 0.03, cM, cx, (ch - 0.01) / 2 + 0.005, -0.01);
+      const nS = Math.max(1, Math.round(Number(m.schubladen) || 5)), sh = (ch - 0.03) / nS;
+      const fugeM = mat("#2b2b2b", "glatt", { name: "Fuge" });
+      for (let i8 = 1; i8 < nS; i8++) b(cw - 0.01, 0.004, 0.003, fugeM, cx, 0.02 + i8 * sh, d / 2 - 0.024);
+      for (let i8 = 0; i8 < nS; i8++) b(cw * 0.35, 0.01, 0.006, fugeM, cx, 0.02 + (i8 + 1) * sh - 0.025, d / 2 - 0.022);
+      const beinM = mat(m.beine_farbe ?? "#1f1f1f", "metall", { name: "Tischbein" });
+      for (const sz of [-1, 1]) rund(g, 0.018, ch, beinM, -sx * (w / 2 - 0.06), ch / 2, sz * (d / 2 - 0.06), 14);
+      break;
+    }
     case "esstisch":
     case "couchtisch":
     case "schreibtisch":
@@ -359,6 +380,20 @@ export function moebelBauen(m: any): MoebelObjekt {
         const nK = w > 1.2 ? 2 : 1;
         for (let i3 = 0; i3 < nK; i3++) b(w / nK - 0.15, 0.12, 0.4, kissen, -w / 2 + (w / nK) * (i3 + 0.5), mOben + 0.05, -d / 2 + kt + 0.24);
       }
+      break;
+    }
+    case "faecherregal": {
+      // Würfelregal (z. B. KALLAX): faecher_x × faecher_y Fächer, kräftiger Außenrahmen, dünnere Zwischenböden
+      const nx = Math.max(1, Math.round(Number(m.faecher_x) || 2)), ny = Math.max(1, Math.round(Number(m.faecher_y) || 2));
+      const ti = 0.016, to = Math.max(ti, Math.min(0.06, (Math.min(w - (nx - 1) * ti - nx * 0.25, h - (ny - 1) * ti - ny * 0.25)) / 2, 0.042));
+      const fw = (w - 2 * to - (nx - 1) * ti) / nx, fh = (h - 2 * to - (ny - 1) * ti) / ny;
+      b(to, h, d, haupt, -w / 2 + to / 2, h / 2, 0);
+      b(to, h, d, haupt, w / 2 - to / 2, h / 2, 0);
+      b(w - 2 * to, to, d, haupt, 0, to / 2, 0);
+      b(w - 2 * to, to, d, haupt, 0, h - to / 2, 0);
+      for (let i6 = 1; i6 < nx; i6++) b(ti, h - 2 * to, d - 0.004, haupt, -w / 2 + to + i6 * (fw + ti) - ti / 2, h / 2, -0.002);
+      for (let j6 = 1; j6 < ny; j6++) b(w - 2 * to, ti, d - 0.004, haupt, 0, to + j6 * (fh + ti) - ti / 2, -0.002);
+      if (m.rueckwand) b(w - 2 * to, h - 2 * to, 0.004, haupt, 0, h / 2, -d / 2 + 0.002);
       break;
     }
     case "tagesbett": {

@@ -68,6 +68,18 @@ def standard_bibliothek() -> list[dict[str, Any]]:
         _v("bett-160", "bett", "Doppelbett 160×200", 1.70, 2.10, 1.05, "beige", "Liegen", "Polster"),
         _v("bett-90", "bett_einzel", "Einzelbett 90×200", 0.97, 2.06, 0.45, "beige", "Liegen"),
         _v("brimnes", "bett_einzel", "Tagesbett BRIMNES 80×200", 0.87, 2.06, 0.45, "beige", "Liegen"),
+        _v("kallax-2x2", "faecherregal", "IKEA KALLAX Regal 2×2 weiß (wandmontiert)", 0.77, 0.39, 0.77, "weiß", "Stauraum",
+           "Spanplatte weiß", faecher_x=2, faecher_y=2, z=0.9),
+        _v("kallax-1x4", "faecherregal", "IKEA KALLAX Regal 1×4 weiß", 0.42, 0.39, 1.47, "weiß", "Stauraum", "Spanplatte weiß",
+           faecher_x=1, faecher_y=4),
+        _v("kallax-2x4", "faecherregal", "IKEA KALLAX Regal 2×4 weiß", 0.77, 0.39, 1.47, "weiß", "Stauraum", "Spanplatte weiß",
+           faecher_x=2, faecher_y=4),
+        _v("kallax-4x4", "faecherregal", "IKEA KALLAX Regal 4×4 weiß", 1.47, 0.39, 1.47, "weiß", "Stauraum", "Spanplatte weiß",
+           faecher_x=4, faecher_y=4),
+        _v("lagkapten-alex-140", "schreibtisch_container", "IKEA LAGKAPTEN/ALEX Schreibtisch 140×60 grau/Holzeffekt schwarz",
+           1.40, 0.60, 0.73, "#6f7072", "Tische", "Platte grau, Kante Holz, ALEX grau, Beine schwarz", container="links",
+           container_breite=0.36, schubladen=5, kante_farbe="#c9a875", preis_eur=114.98,
+           quelle="IKEA 095.853.80 (Murat 06.11.2026)"),
         _v("brimnes-tagesbett", "tagesbett", "IKEA BRIMNES Tagesbett mit 2 Schubladen, weiß", 2.06, 0.87, 0.6, "weiß", "Liegen",
            "Spanplatte weiß", schubladen=2),
         _v("idanaes-180", "bett", "IKEA IDANÄS Polsterbett 180×200 mit Schubladen", 1.90, 2.23, 1.21, "#cfc3a8", "Liegen",
@@ -102,7 +114,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 9
+BIBLIOTHEK_STAND = 11
 
 
 def ecksofas() -> list[dict[str, Any]]:

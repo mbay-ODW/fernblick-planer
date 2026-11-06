@@ -27,8 +27,8 @@ const BODEN_DEKORE: [string, string, string][] = [
   ["Eiche grau", "Klickvinyl", "#a99c8a"], ["Eiche geräuchert", "Klickvinyl", "#7d6248"], ["Nussbaum", "Klickvinyl", "#6b4a33"],
   ["Steinoptik hellgrau", "Fliese", "#c9c4bb"], ["Steinoptik anthrazit", "Fliese", "#5d5b58"], ["Beton-Optik", "Beton", "#a8a49c"],
 ];
-const WANDTYPEN = /^(haengeschrank|wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend|tv$)/;
-const TYPEN = ["tagesbett", "waschmaschinen_unterbau", "mehrzweckschrank", "waschmaschinenschrank", "haengeschrank", "waschmaschine", "trockner", "apothekerschrank", "tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
+const WANDTYPEN = /^(faecherregal|haengeschrank|wandleuchte|wandspot|bilderleuchte|wandregal|spiegel|bild|garderobe_lamellen|tv_board_haengend|tv$)/;
+const TYPEN = ["schreibtisch_container", "faecherregal", "tagesbett", "waschmaschinen_unterbau", "mehrzweckschrank", "waschmaschinenschrank", "haengeschrank", "waschmaschine", "trockner", "apothekerschrank", "tv", "wandleuchte_updown", "wandleuchte", "wandleuchte_schwenkarm", "wandspot", "bilderleuchte", "sofa", "ecksofa", "sessel", "esssofa", "bank", "schuhbank", "stuhl", "sitzsack", "esstisch", "esstisch_rund",
   "couchtisch", "couchtisch_rund", "schreibtisch", "bett", "bett_einzel", "nachttisch", "nachttisch_haengend", "kleiderschrank",
   "kleiderstange", "kommode", "sideboard", "regal_niedrig", "tv_board_haengend", "wandregal", "garderobe_lamellen", "spiegel",
   "spiegel_rund", "bild", "teppich", "pflanze", "stehleuchte", "tischleuchte"];
@@ -359,7 +359,7 @@ class App {
       farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
-    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
     if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
@@ -394,9 +394,9 @@ class App {
     if (!x) return;
     this.aendern((m) => {
       const y = m.moebel.find((z: any) => z.id === x.id);
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe"]) delete y[k];
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe"]) delete y[k];
       Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
     }, "moebel", `${x.name} → ${v.name}`);
     this.tauschModus = false;
   }
