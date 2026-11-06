@@ -345,7 +345,7 @@ export class Plan {
     const t = el("g", { transform: `translate(${x.pos[0]} ${x.pos[1]}) rotate(${x.rot_grad ?? 0})`, class: "stueck" + (x.id === this.auswahl ? " gewaehlt" : "") + (this.warnIds.has(x.id) ? " warnung" : "") + (istFlach(x) ? " flach" : "") + (x.z ? " haengend" : ""), "data-id": x.id }, g);
     el("rect", { x: -w / 2, y: -d / 2, width: w, height: d, rx: Math.min(0.04, w / 4), style: `fill:${x.farbe_hex}` }, t);
     if (!istFlach(x)) el("line", { x1: -w / 2, y1: -d / 2, x2: w / 2, y2: -d / 2, class: "ruecken" }, t);
-    if (x.typ === "ecksofa") {
+    if (x.typ === "ecksofa" || x.typ === "ecksofa_kissen") {
       const rb = Math.min(1.0, w * 0.38), sitzT = Math.min(0.95, d * 0.6);
       const sx = recamiereLinks(x) ? -1 : 1;
       el("polyline", { points: pts([[sx * (-w / 2), -d / 2 + sitzT], [sx * (w / 2 - rb), -d / 2 + sitzT], [sx * (w / 2 - rb), d / 2]]), class: "kontur" }, t);

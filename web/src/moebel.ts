@@ -106,6 +106,56 @@ export function moebelBauen(m: any): MoebelObjekt {
       polster(b, rb - 0.06, 0.42, 0.14, kissen, sx * (w / 2 - rb / 2), sitz + 0.23, -d / 2 + 0.27);
       break;
     }
+    case "ecksofa_kissen": {
+      // Ecksofa mit niedrigem Rücken und losen großen Rückenkissen (z. B. CARRYHOME): Sockel auf Holzfüßen,
+      // ausgestellte Armlehne an der Seite ohne Recamiere, Recamiere links/rechts, Zierkissen
+      const sx = recamiereLinks(m) ? -1 : 1;
+      const fuss = Number(m.beine) || 0.12, sitzT = Math.min(0.95, d * 0.6), sitzH = 0.44 - fuss + 0.02;
+      const rb = Math.min(1.0, w * 0.38), arm = 0.2;
+      const start = g.children.length;
+      // Sitzteil (Bettkasten) + Polster, Recamiere über die ganze Tiefe
+      polster(b, w - arm, sitzH * 0.55, sitzT, stoff, -sx * arm / 2, sitzH * 0.275, -d / 2 + sitzT / 2);
+      polster(b, w - arm - rb - 0.01, sitzH * 0.45, sitzT - 0.2, kissen, sx * (-w / 2 + arm + (w - arm - rb) / 2), sitzH * 0.55 + sitzH * 0.225, -d / 2 + 0.2 + (sitzT - 0.2) / 2);
+      polster(b, rb, sitzH, d - sitzT + 0.2, stoff, sx * (w / 2 - rb / 2), sitzH / 2, -d / 2 + sitzT - 0.2 + (d - sitzT + 0.2) / 2);
+      // niedriger Rücken
+      polster(b, w - arm, 0.62 - fuss, 0.18, stoff, -sx * arm / 2, (0.62 - fuss) / 2, -d / 2 + 0.09);
+      // ausgestellte Armlehne (oben breiter)
+      const ah = 0.62 - fuss;
+      const armGeo = new THREE.BoxGeometry(arm, ah, sitzT + 0.02);
+      const pos = armGeo.getAttribute("position");
+      // Außenseite oben 3,5 cm nach außen ausgestellt
+      for (let i = 0; i < pos.count; i++) if (pos.getY(i) > 0 && pos.getX(i) * -sx > 0) pos.setX(i, pos.getX(i) - sx * 0.035);
+      pos.needsUpdate = true;
+      armGeo.computeVertexNormals();
+      const armM = new THREE.Mesh(armGeo, stoff);
+      armM.position.set(sx * (-w / 2 + arm / 2), ah / 2, -d / 2 + (sitzT + 0.02) / 2);
+      armM.castShadow = true;
+      armM.receiveShadow = true;
+      g.add(armM);
+      // lose Rückenkissen über die ganze Breite
+      const nK = Math.max(2, Math.round(Number(m.rueckenkissen) || 5));
+      const kb = (w - arm - 0.04) / nK;
+      for (let i = 0; i < nK; i++) {
+        const x = sx * (-w / 2 + arm + 0.02 + kb * (i + 0.5));
+        const k = polster(b, kb - 0.02, 0.5, 0.18, kissen, x, sitzH + 0.27, -d / 2 + 0.26);
+        k.rotation.x = -0.16;
+      }
+      // Zierkissen (an beiden Enden)
+      const nZ = Math.round(Number(m.zierkissen ?? 2));
+      for (let i = 0; i < nZ; i++) {
+        const x = (i === 0 ? sx : -sx) * (w / 2 - (i === 0 ? rb * 0.6 : arm + 0.32));
+        const k = polster(b, 0.42, 0.42, 0.13, kissen, x, sitzH + 0.24, -d / 2 + 0.42);
+        k.rotation.x = -0.12;
+        k.rotation.z = (i === 0 ? 1 : -1) * 0.06;
+      }
+      // alles auf die Füße stellen, Holzfüße darunter
+      for (let i = start; i < g.children.length; i++) g.children[i].position.y += fuss;
+      const beinM = mat(m.beine_farbe ?? "#a8703a", "holz", { name: "Sofafuß" });
+      const fx = [sx * (-w / 2 + 0.08), sx * (w / 2 - rb + 0.08), sx * (w / 2 - 0.08)];
+      for (const [x, z] of [[fx[0], -d / 2 + 0.08], [fx[0], -d / 2 + sitzT - 0.08], [fx[2], -d / 2 + 0.08], [fx[2], d / 2 - 0.08], [fx[1], d / 2 - 0.08]] as [number, number][])
+        rund(g, 0.022, fuss, beinM, x, fuss / 2, z, 12, 0.016);
+      break;
+    }
     case "waschmaschine":
     case "trockner": {
       // Frontlader: weißer Korpus, Bedienblende oben, Bullauge vorn (+Z), Waschmittelschublade
@@ -654,7 +704,7 @@ export function recamiereLinks(m: any): boolean {
 
 /** Grundflächen für die Kollisionsprüfung (Ecksofa als L aus zwei Rechtecken). */
 export function fussflaechen(m: any): [number, number][][] {
-  if (m.typ !== "ecksofa") return [ecken(m)];
+  if (m.typ !== "ecksofa" && m.typ !== "ecksofa_kissen") return [ecken(m)];
   const [w, d] = m.masse_bth ?? [2.5, 1.6];
   const sitzT = Math.min(0.95, d * 0.6), rb = Math.min(1.0, w * 0.38);
   const a = ((m.rot_grad ?? 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);

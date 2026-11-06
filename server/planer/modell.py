@@ -25,7 +25,8 @@ FARBEN: dict[str, str] = {
     "cremegrau": "#cfc8bb", "salbei": "#9eae86", "terrakotta": "#b8694a", "blau": "#4a6a8a", "rost": "#9c5a34",
 }
 
-ORIENTIERT_WAND = {"sofa", "ecksofa", "bett", "bett_einzel", "tagesbett", "kleiderschrank", "schrank", "regal", "regal_niedrig",
+ORIENTIERT_WAND = {"sofa", "ecksofa", "ecksofa_kissen", "bett", "bett_einzel", "tagesbett",
+                   "kleiderschrank", "schrank", "regal", "regal_niedrig",
                    "tv_board_haengend", "tv_board", "nachttisch", "nachttisch_haengend", "sessel", "schuhbank",
                    "garderobe_lamellen", "wandregal", "spiegel", "spiegel_rund", "sideboard", "kommode",
                    "schreibtisch"}
@@ -114,12 +115,18 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 11
+BIBLIOTHEK_STAND = 12
 
 
 def ecksofas() -> list[dict[str, Any]]:
     """Ecksofa mit Recamiere rechts bzw. links (von vorn gesehen)."""
     return [
+        _v("carryhome-ecksofa-gruen", "ecksofa_kissen", "CARRYHOME Ecksofa Cord Dunkelgrün (Bettkasten)", 2.84, 1.62, 0.95,
+           "#1f453b", "Sitzen", "Cord", recamiere="links", beine=0.12, rueckenkissen=5, zierkissen=2, preis_eur=899,
+           quelle="XXXLutz Art. 0812010305"),
+        _v("carryhome-ecksofa-taupe", "ecksofa_kissen", "CARRYHOME Ecksofa Cord Taupe (Bettkasten)", 2.84, 1.62, 0.95,
+           "#8a7c6c", "Sitzen", "Cord", recamiere="links", beine=0.12, rueckenkissen=5, zierkissen=2, preis_eur=899,
+           quelle="XXXLutz Art. 0812010304"),
         _v("ecksofa-recamiere-rechts", "ecksofa", "Ecksofa Recamiere rechts", 2.84, 1.62, 0.85, "greige", "Sitzen", "Stoff",
            recamiere="rechts"),
         _v("ecksofa-recamiere-links", "ecksofa", "Ecksofa Recamiere links", 2.84, 1.62, 0.85, "greige", "Sitzen", "Stoff",
@@ -266,7 +273,7 @@ def ausrichten(modell: dict[str, Any]) -> None:
             w, d = fx, fy
         else:
             w, d = fy, fx
-        if typ == "ecksofa":
+        if typ in ("ecksofa", "ecksofa_kissen"):
             w, d = max(fx, fy), min(fx, fy)
         m["masse_bth"] = [round(w, 3), round(d, 3), m["masse_bth"][2]]
         m["rot_grad"] = rot
