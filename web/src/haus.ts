@@ -596,7 +596,7 @@ interface WandLauf { ge: string; basis: number; cx: number; cy: number; ux: numb
  * hinter denen eine Wand liegt (auf die Wandfläche geschoben). Optional ohne bodentiefe Öffnungen und Treppe.
  */
 function wandLaeufe(m: any, M: Masse, waende: WandInfo[], opt: { ohne?: string[]; oeffnungen?: boolean; weg?: TreppenWeg | null;
-  kante?: (ux: number, uy: number) => boolean; geschoss?: string }, cb: (l: WandLauf) => void) {
+  kante?: (ux: number, uy: number) => boolean; geschoss?: string; nur?: (x: number, y: number) => boolean }, cb: (l: WandLauf) => void) {
   const inPoly = (x: number, y: number, poly: P2[]) => {
     let r = false;
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -649,6 +649,7 @@ function wandLaeufe(m: any, M: Masse, waende: WandInfo[], opt: { ohne?: string[]
           if (wand.oeffnungen.some((o) => o.z0 < wand!.z0 + 0.1 && uw > o.u0 - 0.01 && uw < o.u1 + 0.01)) ok = false;
         }
         if (ok && opt.weg && ge === "EG" && opt.weg.zone(px + nx * 0.05, py + ny * 0.05)) ok = false;
+        if (ok && opt.nur && !opt.nur(px + nx * 0.05, py + ny * 0.05)) ok = false;
         if (ok && lauf && lauf.w === wand) lauf.u1 = u1;
         else {
           abschluss();
@@ -695,7 +696,7 @@ function sockelleisten(m: any, M: Masse, waende: WandInfo[], weg: TreppenWeg, te
  * Stellbretter: Bretter zwischen den Deckenbalken auf den Wänden quer zur Balkenlage (EG), darunter eine schwarze
  * Leiste als Abschluss zum Putz (oberflaechen.stellbretter: aus, farbe_hex, leiste_farbe_hex, leiste_hoehe).
  */
-function stellbretter(m: any, M: Masse, waende: WandInfo[], teile: { [k: string]: THREE.Object3D }) {
+function stellbretter(m: any, M: Masse, waende: WandInfo[], teile: { [k: string]: THREE.Object3D }, unterDecke: P2[]) {
   const s = { leiste_farbe_hex: "#161616", leiste_hoehe: 0.02, ...(m.oberflaechen?.stellbretter ?? {}) };
   if (s.aus) return;
   const egD = m.geschosse.find((g: any) => g.id === "EG")?.decke ?? {};
@@ -704,7 +705,16 @@ function stellbretter(m: any, M: Masse, waende: WandInfo[], teile: { [k: string]
   // Balken laufen in x-Richtung → Stellbretter auf Wänden in y-Richtung
   const quer = (ux: number, uy: number) => Math.abs(uy) > 0.7 && Math.abs(ux) < 0.7;
   const bretter: THREE.BufferGeometry[] = [], leisten: THREE.BufferGeometry[] = [];
-  wandLaeufe(m, M, waende, { geschoss: "EG", kante: quer }, (l) => {
+  // nur unter der Balkendecke (OG-Boden), nicht im Luftraum
+  const inPoly = (x: number, y: number) => {
+    let r = false;
+    for (let i = 0, j = unterDecke.length - 1; i < unterDecke.length; j = i++) {
+      const [xi, yi] = unterDecke[i], [xj, yj] = unterDecke[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) r = !r;
+    }
+    return r;
+  };
+  wandLaeufe(m, M, waende, { geschoss: "EG", kante: quer, nur: inPoly }, (l) => {
     bretter.push(leisteGeo(l, bUK, schalung - bUK, 0.02));
     leisten.push(leisteGeo(l, bUK - s.leiste_hoehe, s.leiste_hoehe, 0.012));
   });
@@ -1301,7 +1311,7 @@ export function hausBauen(m: any): HausErgebnis {
 
   // Sockelleisten, Stellbretter zwischen den Deckenbalken
   sockelleisten(m, M, waende, weg, teile);
-  stellbretter(m, M, waende, teile);
+  stellbretter(m, M, waende, teile, ogPoly);
 
   // Außenanlage: Terrasse 4 m, Hof im Osten, Wiese
   {
