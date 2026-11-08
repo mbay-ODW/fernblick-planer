@@ -771,11 +771,11 @@
    "typ": "schiebetuer",
    "p1": [
     3.978,
-    3.13
+    2.665
    ],
    "p2": [
     3.978,
-    3.98
+    3.515
    ],
    "hoehe": 2.01,
    "bruestung": 0,
@@ -783,15 +783,16 @@
    "parkbereich": [
     [
      3.978,
-     3.98
+     3.515
     ],
     [
      3.978,
-     4.85
+     4.365
     ]
    ],
    "parkseite": "Galerie",
-   "quelle": "Murat 04.11.2026 (Schiebetür sitzt auf der Galerieseite)"
+   "quelle": "Murat 08.11.2026 gemessen: Wand zwischen Türöffnung und Wand Richtung Treppe im Kinderzimmer 1,65 m (vorher Plan 1,185 m); Schiebetür sitzt auf der Galerieseite (04.11.2026)",
+   "sicher": true
   }
  ],
  "feste_elemente": [
