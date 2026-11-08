@@ -483,9 +483,25 @@ export function moebelBauen(m: any): MoebelObjekt {
       }
       break;
     }
+    case "kommode": {
+      // Schubladenkommode (z. B. MALM): Korpus bis zum Boden, Schubladen in Reihen/Spalten,
+      // Griffmulde als dunkle Fuge an der Oberkante jeder Schublade
+      const nx = Math.max(1, Math.round(Number(m.schubladen_x) || 1));
+      const ny = Math.max(1, Math.round(Number(m.schubladen_y) || 3));
+      const wand = 0.018, sockel = 0.02, fugeM = mat("#141414", "glatt", { name: "Fuge" });
+      b(w, h, d - 0.018, haupt, 0, h / 2, -0.009);
+      const fw = (w - 2 * wand) / nx, fh = (h - wand - sockel) / ny, zf = d / 2 - 0.009;
+      for (let ix = 0; ix < nx; ix++) {
+        for (let iy = 0; iy < ny; iy++) {
+          const cx = -w / 2 + wand + fw * (ix + 0.5), cy = sockel + fh * (iy + 0.5);
+          b(fw - 0.004, fh - 0.004, 0.018, haupt, cx, cy, zf);
+          b(fw - 0.03, 0.012, 0.004, fugeM, cx, cy + fh / 2 - 0.012, zf + 0.008);
+        }
+      }
+      break;
+    }
     case "nachttisch":
     case "nachttisch_haengend":
-    case "kommode":
     case "sideboard":
     case "regal_niedrig":
     case "tv_board_haengend":

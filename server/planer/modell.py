@@ -116,10 +116,16 @@ def ikea() -> list[dict[str, Any]]:
            "Spanplatte weiß", schubladen=2),
         _v("idanaes-180", "bett", "IKEA IDANÄS Polsterbett 180×200 mit Schubladen", 1.90, 2.23, 1.21, "#cfc3a8", "Liegen",
            "Polster beige", beine=0.13, rahmen_hoehe=0.49, schubladen=2, knoepfe=True),
+        _v("malm-3", "kommode", "IKEA MALM Kommode 3 Schubladen weiß 80×78", 0.80, 0.48, 0.78, "weiß", "Stauraum",
+           "Spanplatte weiß, Griffmulden", schubladen_x=1, schubladen_y=3),
+        _v("malm-4", "kommode", "IKEA MALM Kommode 4 Schubladen weiß 80×100", 0.80, 0.48, 1.00, "weiß", "Stauraum",
+           "Spanplatte weiß, Griffmulden", schubladen_x=1, schubladen_y=4),
+        _v("malm-6", "kommode", "IKEA MALM Kommode 6 Schubladen weiß 160×78", 1.60, 0.48, 0.78, "weiß", "Stauraum",
+           "Spanplatte weiß, Griffmulden", schubladen_x=2, schubladen_y=3),
     ]
 
 
-BIBLIOTHEK_STAND = 15
+BIBLIOTHEK_STAND = 16
 
 
 def ecksofas() -> list[dict[str, Any]]:
