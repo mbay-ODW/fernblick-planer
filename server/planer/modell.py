@@ -53,7 +53,7 @@ def standard_bibliothek() -> list[dict[str, Any]]:
         _v("gullvalla-2er", "sofa", "2er-Sofa GULLVALLA", 1.42, 0.83, 0.78, "graugrün", "Sitzen", "Stoff"),
         _v("ecksofa-carryhome", "ecksofa", "Ecksofa mit Recamiere (CARRYHOME)", 2.84, 1.62, 0.85, "greige/sand",
            "Sitzen", "Cord", preis_eur=899),
-    ] + ecksofas() + haushalt() + [
+    ] + ecksofas() + haushalt() + ikea() + [
         _v("sessel", "sessel", "Sessel", 0.80, 0.80, 0.85, "olivgrün", "Sitzen", "Stoff"),
         _v("sitzsack", "sitzsack", "Sitzsack/Bodenkissen", 0.70, 0.70, 0.45, "sand", "Sitzen", "Cord"),
         _v("stuhl", "stuhl", "Esszimmerstuhl", 0.50, 0.55, 0.85, "olivgrün", "Sitzen", "Stoff abwischbar"),
@@ -69,22 +69,6 @@ def standard_bibliothek() -> list[dict[str, Any]]:
         _v("bett-160", "bett", "Doppelbett 160×200", 1.70, 2.10, 1.05, "beige", "Liegen", "Polster"),
         _v("bett-90", "bett_einzel", "Einzelbett 90×200", 0.97, 2.06, 0.45, "beige", "Liegen"),
         _v("brimnes", "bett_einzel", "Tagesbett BRIMNES 80×200", 0.87, 2.06, 0.45, "beige", "Liegen"),
-        _v("kallax-2x2", "faecherregal", "IKEA KALLAX Regal 2×2 weiß (wandmontiert)", 0.77, 0.39, 0.77, "weiß", "Stauraum",
-           "Spanplatte weiß", faecher_x=2, faecher_y=2, z=0.9),
-        _v("kallax-1x4", "faecherregal", "IKEA KALLAX Regal 1×4 weiß", 0.42, 0.39, 1.47, "weiß", "Stauraum", "Spanplatte weiß",
-           faecher_x=1, faecher_y=4),
-        _v("kallax-2x4", "faecherregal", "IKEA KALLAX Regal 2×4 weiß", 0.77, 0.39, 1.47, "weiß", "Stauraum", "Spanplatte weiß",
-           faecher_x=2, faecher_y=4),
-        _v("kallax-4x4", "faecherregal", "IKEA KALLAX Regal 4×4 weiß", 1.47, 0.39, 1.47, "weiß", "Stauraum", "Spanplatte weiß",
-           faecher_x=4, faecher_y=4),
-        _v("lagkapten-alex-140", "schreibtisch_container", "IKEA LAGKAPTEN/ALEX Schreibtisch 140×60 grau/Holzeffekt schwarz",
-           1.40, 0.60, 0.73, "#6f7072", "Tische", "Platte grau, Kante Holz, ALEX grau, Beine schwarz", container="links",
-           container_breite=0.36, schubladen=5, kante_farbe="#c9a875", preis_eur=114.98,
-           quelle="IKEA 095.853.80 (Murat 06.11.2026)"),
-        _v("brimnes-tagesbett", "tagesbett", "IKEA BRIMNES Tagesbett mit 2 Schubladen, weiß", 2.06, 0.87, 0.6, "weiß", "Liegen",
-           "Spanplatte weiß", schubladen=2),
-        _v("idanaes-180", "bett", "IKEA IDANÄS Polsterbett 180×200 mit Schubladen", 1.90, 2.23, 1.21, "#cfc3a8", "Liegen",
-           "Polster beige", beine=0.13, rahmen_hoehe=0.49, schubladen=2, knoepfe=True),
         _v("schlafsofa", "sofa", "Schlafsofa 200", 2.00, 0.95, 0.85, "anthrazit", "Liegen", "Stoff"),
         _v("kleiderschrank-150", "kleiderschrank", "Kleiderschrank 150", 1.50, 0.60, 2.00, "weiß/eiche", "Stauraum"),
         _v("kleiderschrank-100", "kleiderschrank", "Kleiderschrank 100", 1.00, 0.60, 2.00, "weiß", "Stauraum"),
@@ -115,7 +99,27 @@ def standard_bibliothek() -> list[dict[str, Any]]:
     ] + wandleuchten() + medien()
 
 
-BIBLIOTHEK_STAND = 14
+def ikea() -> list[dict[str, Any]]:
+    """IKEA-Möbel aus Murats Auswahl (in der Migration enthalten, damit sie auch in bestehende Modelle kommen)."""
+    return [
+        _v("kallax-1x1", "faecherregal", "IKEA KALLAX Regal 1×1 weiß 42×42", 0.42, 0.39, 0.42, "weiß", "Stauraum",
+           "Spanplatte weiß", faecher_x=1, faecher_y=1),
+        _v("kallax-2x2", "faecherregal", "IKEA KALLAX Regal 2×2 weiß 77×77", 0.77, 0.39, 0.77, "weiß", "Stauraum",
+           "Spanplatte weiß", faecher_x=2, faecher_y=2),
+        _v("kallax-4x2", "faecherregal", "IKEA KALLAX Regal 4×2 weiß 147×77 (liegend)", 1.47, 0.39, 0.77, "weiß",
+           "Stauraum", "Spanplatte weiß", faecher_x=4, faecher_y=2),
+        _v("lagkapten-alex-140", "schreibtisch_container", "IKEA LAGKAPTEN/ALEX Schreibtisch 140×60 grau/Holzeffekt schwarz",
+           1.40, 0.60, 0.73, "#6f7072", "Tische", "Platte grau, Kante Holz, ALEX grau, Beine schwarz", container="links",
+           container_breite=0.36, schubladen=5, kante_farbe="#c9a875", preis_eur=114.98,
+           quelle="IKEA 095.853.80 (Murat 06.11.2026)"),
+        _v("brimnes-tagesbett", "tagesbett", "IKEA BRIMNES Tagesbett mit 2 Schubladen, weiß", 2.06, 0.87, 0.6, "weiß", "Liegen",
+           "Spanplatte weiß", schubladen=2),
+        _v("idanaes-180", "bett", "IKEA IDANÄS Polsterbett 180×200 mit Schubladen", 1.90, 2.23, 1.21, "#cfc3a8", "Liegen",
+           "Polster beige", beine=0.13, rahmen_hoehe=0.49, schubladen=2, knoepfe=True),
+    ]
+
+
+BIBLIOTHEK_STAND = 15
 
 
 def ecksofas() -> list[dict[str, Any]]:
@@ -368,7 +372,7 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
     m.setdefault("bibliothek", standard_bibliothek())
     if int(meta.get("bibliothek_stand", 1)) < BIBLIOTHEK_STAND:
         vorhanden = {v.get("vorlage_id") for v in m["bibliothek"]}
-        m["bibliothek"] += [v for v in wandleuchten() + medien() + ecksofas() + haushalt()
+        m["bibliothek"] += [v for v in wandleuchten() + medien() + ecksofas() + haushalt() + ikea()
                               if v["vorlage_id"] not in vorhanden]
         meta["bibliothek_stand"] = BIBLIOTHEK_STAND
     m.setdefault("einstellungen", {"breitengrad": 49.654, "laengengrad": 9.077, "datum": "2026-06-21",
