@@ -233,15 +233,16 @@
     ],
     [
      3.803,
-     5.165
+     5
     ],
     [
      0,
-     5.165
+     5
     ]
    ],
-   "flaeche_plan": 16.1,
-   "dachschraege": "Westseite: Kniestock 1,10 m an x=0, 2,0 m Höhe bei x≈1,15"
+   "flaeche_plan": 15.6,
+   "dachschraege": "Westseite: Kniestock 1,10 m an x=0, 2,0 m Höhe bei x≈1,15",
+   "quelle": "Südwand nach SEMA-Holzbaumodell Warkentin (13.11.2026): direkt über der Schlafzimmer-Südwand EG"
   },
   {
    "id": "galerie",
@@ -266,11 +267,11 @@
     ],
     [
      2.98,
-     5.34
+     5.175
     ],
     [
      3.978,
-     5.34
+     5.175
     ]
    ],
    "flaeche_plan": 22.8,
@@ -476,7 +477,7 @@
    ],
    "bis": [
     3.8905,
-    5.34
+    5.175
    ],
    "dicke": 0.175,
    "typ": "innen"
@@ -486,14 +487,15 @@
    "geschoss": "OG",
    "von": [
     0,
-    5.2525
+    5.0875
    ],
    "bis": [
     3.978,
-    5.2525
+    5.0875
    ],
    "dicke": 0.175,
-   "typ": "innen"
+   "typ": "innen",
+   "quelle": "SEMA-Holzbaumodell Warkentin"
   },
   {
    "id": "OG-BRUESTUNG",
@@ -747,8 +749,9 @@
     2.85,
     0
    ],
-   "hoehe": 2.0,
-   "bruestung": 0
+   "hoehe": 2.45,
+   "bruestung": 0,
+   "quelle": "Höhe nach SEMA-Modell Warkentin (103×245)"
   },
   {
    "id": "F-galerie",
@@ -762,8 +765,9 @@
     5.93,
     0
    ],
-   "hoehe": 2.0,
-   "bruestung": 0
+   "hoehe": 2.45,
+   "bruestung": 0,
+   "quelle": "Höhe nach SEMA-Modell Warkentin (103×245)"
   },
   {
    "id": "T-kinder",
@@ -771,11 +775,11 @@
    "typ": "schiebetuer",
    "p1": [
     3.978,
-    2.665
+    2.5
    ],
    "p2": [
     3.978,
-    3.515
+    3.35
    ],
    "hoehe": 2.01,
    "bruestung": 0,
@@ -783,15 +787,15 @@
    "parkbereich": [
     [
      3.978,
-     3.515
+     3.35
     ],
     [
      3.978,
-     4.365
+     4.2
     ]
    ],
    "parkseite": "Galerie",
-   "quelle": "Murat 08.11.2026 gemessen: Wand zwischen Türöffnung und Wand Richtung Treppe im Kinderzimmer 1,65 m (vorher Plan 1,185 m); Schiebetür sitzt auf der Galerieseite (04.11.2026)",
+   "quelle": "Murat 08.11.2026 gemessen 1,65 m; bestätigt durch SEMA-Modell Warkentin",
    "sicher": true
   }
  ],
