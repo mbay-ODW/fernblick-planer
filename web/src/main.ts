@@ -447,6 +447,7 @@ class App {
     document.getElementById("kameramodus")!.hidden = this.modus === "2d";
     for (const b of document.querySelectorAll<HTMLButtonElement>("#kameramodus button")) b.classList.toggle("an", b.dataset.k === this.szene.modus);
     document.getElementById("dachSchalter")!.hidden = this.modus === "2d" || this.szene.modus === "begehen";
+    document.getElementById("balkenSchalter")!.hidden = this.modus !== "2d";
     this.hilfe();
   }
 
@@ -537,6 +538,10 @@ class App {
     (document.getElementById("dach") as HTMLInputElement).addEventListener("change", (e) => {
       this.szene.dachZeigen = (e.target as HTMLInputElement).checked;
       this.szene.sichtbarkeit();
+    });
+    (document.getElementById("balken") as HTMLInputElement).addEventListener("change", (e) => {
+      this.plan.balkenZeigen = (e.target as HTMLInputElement).checked;
+      this.plan.zeichnen();
     });
     document.getElementById("rueck")!.onclick = () => this.rueckgaengig();
     document.getElementById("vor")!.onclick = () => this.wiederholen();

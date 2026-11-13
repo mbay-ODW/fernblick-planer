@@ -105,6 +105,33 @@ function box(w: number, h: number, d: number, m: THREE.Material, x: number, y: n
 }
 
 /** Fläche (Polygon in Modell-xy) auf Höhe z; oben=true → Normale nach oben. */
+/** Rechteck eines Holzbauteils im Grundriss (Achse von–bis, Breite b), auf [0, W] × [0, yMax] beschnitten. */
+export interface HolzRechteck { x0: number; y0: number; x1: number; y1: number; art: string; achse: "x" | "y"; mitte: number }
+
+/** Echte Balkenlage der EG-Decke (feste_elemente typ "balkenlage", z. B. aus dem SEMA-Modell des Zimmerers) */
+export function balkenRechtecke(m: any, M: Masse, yMax = M.L): HolzRechteck[] {
+  const bl = (m.feste_elemente ?? []).find((f: any) => f.typ === "balkenlage" && (f.geschoss ?? "EG") === "EG");
+  if (!bl || !Array.isArray(bl.balken)) return [];
+  const aus: HolzRechteck[] = [];
+  for (const b of bl.balken) {
+    const [ax, ay] = b.von, [bx, by] = b.bis, br = b.b ?? bl.b ?? 0.08;
+    const inX = Math.abs(by - ay) < Math.abs(bx - ax);
+    let x0 = inX ? Math.min(ax, bx) : ax - br / 2, x1 = inX ? Math.max(ax, bx) : ax + br / 2;
+    let y0 = inX ? ay - br / 2 : Math.min(ay, by), y1 = inX ? ay + br / 2 : Math.max(ay, by);
+    x0 = Math.max(0, x0); x1 = Math.min(M.W, x1); y0 = Math.max(0, y0); y1 = Math.min(yMax, y1);
+    if (x1 - x0 < 0.02 || y1 - y0 < 0.02) continue;
+    aus.push({ x0, y0, x1, y1, art: b.art ?? "Deckenbalken", achse: inX ? "x" : "y", mitte: inX ? ay : ax });
+  }
+  return aus;
+}
+
+/** Sparrenlage (feste_elemente typ "sparrenlage"): Achsen in y, Breite b; null = Raster-Annahme */
+export function sparrenLage(m: any): { ys: number[]; b: number; h: number } | null {
+  const sl = (m.feste_elemente ?? []).find((f: any) => f.typ === "sparrenlage");
+  if (!sl || !Array.isArray(sl.y)) return null;
+  return { ys: sl.y.map(Number), b: sl.b ?? 0.08, h: sl.h ?? 0.2 };
+}
+
 export function flaeche(poly: P2[], z: number, m: THREE.Material | THREE.Material[], oben = true): THREE.Mesh {
   const s = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, oben ? -y : y)));
   const g = new THREE.ShapeGeometry(s);
@@ -1174,12 +1201,24 @@ export function hausBauen(m: any): HausErgebnis {
   stirn.userData = { art: "decke" };
   decke.add(stirn);
   const bb = egD.balken_breite ?? 0.1, bh = egD.balken_hoehe ?? 0.21, ab = egD.balken_achsabstand ?? 0.625;
-  const bUK = egD.balken_unterkante_z ?? schalung - bh;
-  for (let y = ab / 2; y < kanteY - 0.05; y += ab) {
-    const x0 = y > lochY0 ? loch : 0;
-    decke.add(box(M.W - x0, schalung - bUK, bb, holz, (x0 + M.W) / 2, y, (bUK + schalung) / 2));
+  const echte = balkenRechtecke(m, M, kanteY);
+  if (echte.length) {
+    // Balkenlage laut Zimmerer (Lage und Querschnitt je Balken)
+    const bl = m.feste_elemente.find((f: any) => f.typ === "balkenlage");
+    const uk = schalung - (bl?.hoehe ?? 0.2);
+    for (const r of echte) {
+      const me = box(r.x1 - r.x0, schalung - uk, r.y1 - r.y0, holz, (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2, (uk + schalung) / 2);
+      me.userData = { art: "balken", balken: r.art };
+      decke.add(me);
+    }
+  } else {
+    const bUK = egD.balken_unterkante_z ?? schalung - bh;
+    for (let y = ab / 2; y < kanteY - 0.05; y += ab) {
+      const x0 = y > lochY0 ? loch : 0;
+      decke.add(box(M.W - x0, schalung - bUK, bb, holz, (x0 + M.W) / 2, y, (bUK + schalung) / 2));
+    }
+    decke.add(box(M.W - loch, schalung - bUK, bb, holz, (loch + M.W) / 2, kanteY - bb / 2, (bUK + schalung) / 2));
   }
-  decke.add(box(M.W - loch, schalung - bUK, bb, holz, (loch + M.W) / 2, kanteY - bb / 2, (bUK + schalung) / 2));
   teile.ogDecke.add(decke);
 
   // OG-Boden als Platte (Oberseite) – Räume liegen darüber
@@ -1274,8 +1313,11 @@ export function hausBauen(m: any): HausErgebnis {
       const sp = mat(HOLZ_FICHTE, "holz", { name: "Sparren" });
       const xi = seite === 0 ? 0 : M.W;
       const laenge = Math.abs(xr - xi) / cos;
-      for (let y = 0.4; y < M.L; y += 0.8) {
-        const s = new THREE.Mesh(new THREE.BoxGeometry(laenge, 0.14, 0.08), sp);
+      const sl = sparrenLage(m);
+      const sys: number[] = sl ? sl.ys.filter((y) => y > 0.02 && y < M.L - 0.02) : [];
+      if (!sl) for (let y = 0.4; y < M.L; y += 0.8) sys.push(y);
+      for (const y of sys) {
+        const s = new THREE.Mesh(new THREE.BoxGeometry(laenge, 0.14, sl?.b ?? 0.08), sp);
         const mx = (xi + xr) / 2;
         s.position.set(mx, dachInnen(M, mx) - 0.07 / cos, y);
         s.rotation.z = seite === 0 ? Math.atan(M.tan) : -Math.atan(M.tan);

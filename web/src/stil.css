@@ -258,3 +258,12 @@ details.schiene .zeile.spot select { min-width: 0; width: 82px; }
 #buehne:not([data-modus="3d"]) .messlabel { display: none !important; }
 
 input.lichtfarbe { width: 34px; height: 26px; padding: 0 2px; }
+
+/* Ebene Holzbau (Balken/Sparren) im 2D-Plan */
+.plan .holzbau rect { fill: rgba(176, 124, 58, .28); stroke: #8a5a22; stroke-width: .008; pointer-events: none; }
+.plan .holzbau rect.unterzug { fill: rgba(176, 124, 58, .45); }
+.plan .holzbau rect.pfette { fill: rgba(120, 80, 30, .45); }
+.plan .holzmass { font-size: .11px; fill: #8a5a22; pointer-events: none; }
+.plan .holzmass.links { text-anchor: start; }
+.plan .holzmass.rechts { text-anchor: end; }
+.plan .holztitel { font-size: .14px; fill: #8a5a22; text-anchor: middle; font-weight: 600; pointer-events: none; }

@@ -1203,6 +1203,303 @@
    "schenkel": 0.025,
    "farbe_hex": "#161616",
    "quelle": "Murat 04.11.2026: Eckleiste schwarz an der Ecke Schlafzimmer/Flur"
+  },
+  {
+   "id": "balkenlage-eg",
+   "typ": "balkenlage",
+   "geschoss": "EG",
+   "hoehe": 0.2,
+   "b": 0.08,
+   "quelle": "SEMA-Holzbaumodell Holzbau Warkentin (BV 0159, Stand 28.01.2026), umgerechnet ±2 cm",
+   "balken": [
+    {
+     "von": [
+      -0.235,
+      0.02
+     ],
+     "bis": [
+      3.033,
+      0.02
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      0.654
+     ],
+     "bis": [
+      3.033,
+      0.654
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      1.289
+     ],
+     "bis": [
+      3.033,
+      1.289
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      1.923
+     ],
+     "bis": [
+      3.033,
+      1.923
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      2.558
+     ],
+     "bis": [
+      3.033,
+      2.558
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      3.193
+     ],
+     "bis": [
+      3.033,
+      3.193
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      3.827
+     ],
+     "bis": [
+      3.033,
+      3.827
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      4.462
+     ],
+     "bis": [
+      3.033,
+      4.462
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      -0.235,
+      5.081
+     ],
+     "bis": [
+      3.033,
+      5.081
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      0.02
+     ],
+     "bis": [
+      8.015,
+      0.02
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      0.654
+     ],
+     "bis": [
+      8.015,
+      0.654
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      1.289
+     ],
+     "bis": [
+      8.015,
+      1.289
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      1.923
+     ],
+     "bis": [
+      8.015,
+      1.923
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      2.558
+     ],
+     "bis": [
+      8.015,
+      2.558
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      3.193
+     ],
+     "bis": [
+      8.015,
+      3.193
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      3.852
+     ],
+     "bis": [
+      8.015,
+      3.852
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      4.487
+     ],
+     "bis": [
+      8.015,
+      4.487
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      5.121
+     ],
+     "bis": [
+      8.015,
+      5.121
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.033,
+      5.755
+     ],
+     "bis": [
+      8.015,
+      5.755
+     ],
+     "b": 0.08,
+     "art": "Deckenbalken 8/20"
+    },
+    {
+     "von": [
+      3.028,
+      -0.235
+     ],
+     "bis": [
+      3.028,
+      6.47
+     ],
+     "b": 0.12,
+     "art": "Unterzug 12/20"
+    },
+    {
+     "von": [
+      3.088,
+      6.41
+     ],
+     "bis": [
+      8.015,
+      6.41
+     ],
+     "b": 0.12,
+     "art": "Unterzug 12/20"
+    }
+   ]
+  },
+  {
+   "id": "sparrenlage",
+   "typ": "sparrenlage",
+   "geschoss": "OG",
+   "b": 0.08,
+   "h": 0.2,
+   "neigung_grad": 38,
+   "y": [
+    -0.265,
+    0.01,
+    0.66,
+    1.31,
+    1.96,
+    2.61,
+    3.26,
+    3.91,
+    4.56,
+    5.209,
+    5.854,
+    6.498,
+    7.143,
+    7.787,
+    8.432,
+    9.076,
+    9.721,
+    10.365,
+    11.01,
+    11.265,
+    11.495,
+    12.138,
+    12.781,
+    13.425
+   ],
+   "quelle": "SEMA-Holzbaumodell Holzbau Warkentin (Sparren 8/20, First x 3,89), umgerechnet ±2 cm"
   }
  ],
  "moebel": [
@@ -2231,7 +2528,6 @@
   }
  ],
  "offene_fragen": [
-  "Sichtbalken EG: Breite, Achsabstand, Spannrichtung",
   "Galerie: 1 m breiter Streifen vor der Glasbrüstung bleibt möbelfrei (keine Kletterhilfe)",
   "Galerie: Konzept Chill-Lounge von Claude, noch nicht abgestimmt; TV optional",
   "Bad: Lage Dusche/WC/Waschtisch aus Foto geschätzt (±15 cm)",

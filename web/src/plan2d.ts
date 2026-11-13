@@ -1,5 +1,5 @@
 // 2D-Grundriss (SVG, Norden oben): Räume, Wände mit Öffnungen, Einbauten, Möbel zum Ziehen und Drehen, Maßketten
-import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad, lamellenMasse } from "./haus";
+import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad, lamellenMasse, balkenRechtecke, sparrenLage } from "./haus";
 import type { Bauteil } from "./szene";
 import { bauteilFinden, bauteilVerschieben, mitlaeuferKopie } from "./bauteile";
 import { ecken, istFlach, recamiereLinks } from "./moebel";
@@ -58,6 +58,9 @@ export class Plan {
   private waende: WandInfo[] = [];
   private M!: Masse;
   pinsel = false;
+  /** Ebene Holzbau: EG = Deckenbalken, OG = Sparren und Pfette (mit Achsmaßen ab Nordwand) */
+  balkenZeigen = false;
+  private holzRechtecke: P2[][] = [];
   /** Messen: Strecken [A, B] (bleiben bis Esc), laufender Startpunkt und Zeiger */
   messen = false;
   messungen: [P2, P2][] = [];
@@ -300,6 +303,48 @@ export class Plan {
       }
     }
 
+    // Ebene Holzbau
+    this.holzRechtecke = [];
+    if (this.balkenZeigen) {
+      const hg = el("g", { class: "holzbau" }, svg);
+      const rechteck = (x0: number, y0: number, x1: number, y1: number, kl = "") => {
+        el("rect", { x: x0, y: y0, width: x1 - x0, height: y1 - y0, class: kl }, hg);
+        this.holzRechtecke.push([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
+      };
+      const beschriften = (y: number, links: boolean) => {
+        const t = el("text", { x: links ? -0.42 : M.W + 0.42, y: y + 0.045, class: "holzmass" + (links ? " rechts" : " links") }, hg);
+        t.textContent = `${Math.round(y * 100)}`;
+      };
+      if (ge === "EG") {
+        const rs = balkenRechtecke(m, M);
+        for (const r of rs) rechteck(r.x0, r.y0, r.x1, r.y1, r.art.startsWith("Unterzug") ? "unterzug" : "");
+        const gesehen = new Set<string>();
+        for (const r of rs) {
+          if (r.achse !== "x") continue;
+          const links = r.x0 < 0.5 && r.x1 < M.W / 2 + 0.5;
+          const k = (links ? "l" : "r") + Math.round(r.mitte * 100);
+          if (gesehen.has(k)) continue;
+          gesehen.add(k);
+          beschriften(r.mitte, links);
+        }
+        if (rs.length) el("text", { x: M.W / 2, y: -0.55, class: "holztitel" }, hg).textContent = "Deckenbalken EG (Achsmaß ab Nordwand, cm)";
+      } else {
+        const sl = sparrenLage(m);
+        if (sl) {
+          for (const y of sl.ys) {
+            if (y < -0.4 || y > M.L + 0.1) continue;
+            const y0 = Math.max(-0.36, y - sl.b / 2), y1 = Math.min(M.L, y + sl.b / 2);
+            rechteck(-0.36, y0, M.W + 0.36, y1);
+            if (y > 0 && y < M.L) { beschriften(y, true); beschriften(y, false); }
+          }
+          const pf = (m.feste_elemente ?? []).find((f: any) => f.typ === "pfette");
+          const px = pf?.pos_x ?? M.W / 2, pb = pf?.breite ?? 0.16;
+          rechteck(px - pb / 2, -0.36, px + pb / 2, M.L, "pfette");
+          el("text", { x: M.W / 2, y: -0.55, class: "holztitel" }, hg).textContent = "Sparren und Firstpfette (Achsmaß ab Nordwand, cm)";
+        }
+      }
+    }
+
     // Maße für Auswahl
     const sel = liste.find((x: any) => x.id === this.auswahl);
     if (sel) this.masseZeichnen(sel, svg);
@@ -327,6 +372,7 @@ export class Plan {
       const [[x0, y0], [x1, y1]] = f.rechteck;
       fang([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
     }
+    for (const r of this.holzRechtecke) fang(r);
     this.messG = el("g", { class: "messen" }, svg);
     this.messZeichnen();
 

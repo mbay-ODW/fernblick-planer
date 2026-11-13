@@ -347,7 +347,10 @@ def bauteil_setzen(sammlung: str, eintraege: list[dict[str, Any]], notiz: str = 
     ausdrücklichen Wunsch (z. B. neue Maße aus einem Plan). Felder wie im Modell (modell_lesen).
     Lamellenwand (waende, typ lamellen): lamellen = {anzahl, breite, tiefe, abstand} in m (breite entlang der Wand,
     abstand = lichte Weite); mit anzahl ist die Länge anzahl·breite + (anzahl−1)·abstand ab „von“ – „bis“ passend setzen.
-    Öffnungen (typ tuer): aufschlag = Raum-ID, in den die Tür aufschlägt."""
+    Öffnungen (typ tuer): aufschlag = Raum-ID, in den die Tür aufschlägt.
+    Holzbau (feste_elemente): typ "balkenlage" (EG-Decke) mit hoehe und balken = [{von: [x, y], bis: [x, y], b, art}]
+    (Achsen, art z. B. Deckenbalken/Unterzug) ersetzt das angenommene Balkenraster; typ "sparrenlage" mit
+    y = [Achsen der Sparren ab Nordwand], b, h. Beides zeigt der 2D-Plan mit dem Schalter „Balken“."""
     if sammlung not in ("raeume", "waende", "oeffnungen", "feste_elemente"):
         raise ValueError("sammlung muss raeume, waende, oeffnungen oder feste_elemente sein")
 
