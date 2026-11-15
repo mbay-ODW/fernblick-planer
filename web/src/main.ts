@@ -10,6 +10,9 @@ import { seitenName, P2, lamellenMasse } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
 import { tvZoll, recamiereLinks } from "./moebel";
+
+const TOUCH = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+const BEGEHEN_TOUCH = "Knüppel links = laufen (weit ziehen = schneller) · rechts wischen = umschauen · Boden antippen = hingehen";
 import { SCHMAL } from "./geraet";
 
 type Modus = "2d" | "3d" | "render";
@@ -491,9 +494,10 @@ class App {
       ? "Messen: Anfangs- und Endpunkt anklicken · rastet an Ecken/Kanten ein (Alt = frei, Umschalt = waagrecht/senkrecht) · ziehen = verschieben · Esc löscht/beendet"
       : "Messen: zwei Punkte auf Flächen anklicken · rastet an Ecken ein (Alt = frei) · ziehen = drehen · Esc löscht/beendet";
     else if (this.nurLesen) t.textContent = this.modus === "2d" ? "Ziehen = Plan verschieben · Mausrad/zwei Finger = zoomen · 📏 Messen"
-      : this.szene.modus === "begehen" ? "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Klick auf Boden = hingehen"
+      : this.szene.modus === "begehen" ? (TOUCH ? BEGEHEN_TOUCH : "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Klick auf Boden = hingehen")
       : "Ziehen = drehen · Rechts/zwei Finger = verschieben · Rad = zoomen · „Begehen“ zum Durchlaufen";
     else if (this.modus === "2d") t.textContent = "Ziehen = verschieben (Alt = 1 cm) · Griff = drehen (Umschalt = frei) · R/Q/E drehen · Entf löschen · Strg+D duplizieren · Mausrad zoomt";
+    else if (this.szene.modus === "begehen" && TOUCH) t.textContent = BEGEHEN_TOUCH + " · Möbel antippen = auswählen";
     else if (this.szene.modus === "begehen") t.textContent = "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Doppelklick = Maus fangen (Esc lösen) · Klick auf Boden = hingehen · Klick auf Möbel = auswählen";
     else t.textContent = "Ziehen = drehen · Rechts/zwei Finger = verschieben · Rad = zoomen · Möbel anklicken und ziehen · R/Q/E drehen";
   }

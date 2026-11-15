@@ -67,6 +67,10 @@ export class Szene {
   private ray = new THREE.Raycaster();
   private uhr = new THREE.Clock();
   private tasten = new Set<string>();
+  /** Steuerknüppel fürs Tablet (Begehen): links unten, Daumen ziehen = laufen, weit ziehen = schneller */
+  private stick = { vor: 0, seit: 0, rennen: false, aktiv: false };
+  private stickEl!: HTMLElement;
+  private readonly touch = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
   private blick = { gier: 0, nick: 0 };
   fuss = new THREE.Vector3(6, 0, 5); // Modell x, y, z (Fußhöhe)
   private ziehen: { id: string; ebene: THREE.Plane; versatz: THREE.Vector3; start: THREE.Vector2; aktiv: boolean } | null = null;
@@ -113,6 +117,7 @@ export class Szene {
     this.moebelGruppe.name = "Möbel";
     new ResizeObserver(() => this.groesse()).observe(behaelter);
     this.ereignisse();
+    this.steuerknueppel();
     this.renderer.setAnimationLoop(() => this.bild());
   }
 
@@ -601,6 +606,7 @@ export class Szene {
   // ---------------------------------------------------------------------------
   umschauen() {
     this.modus = "orbit";
+    this.knueppelZeigen();
     if (document.pointerLockElement) document.exitPointerLock();
     this.orbit.enabled = true;
     const ziel = new THREE.Vector3(this.fuss.x, this.fuss.z + 1.2, this.fuss.y);
@@ -614,8 +620,55 @@ export class Szene {
     this.sichtbarkeit();
   }
 
+  private steuerknueppel() {
+    const basis = document.createElement("div");
+    basis.className = "steuerknueppel";
+    basis.hidden = true;
+    const griff = document.createElement("div");
+    griff.className = "steuerknueppel-griff";
+    basis.append(griff);
+    this.behaelter.append(basis);
+    this.stickEl = basis;
+    let id: number | null = null;
+    const setzen = (e: PointerEvent) => {
+      const r = basis.getBoundingClientRect();
+      const max = r.width / 2;
+      let dx = e.clientX - (r.left + max), dy = e.clientY - (r.top + max);
+      const l = Math.hypot(dx, dy);
+      this.stick.rennen = l > max * 1.25;
+      if (l > max) { dx *= max / l; dy *= max / l; }
+      this.stick.seit = dx / max;
+      this.stick.vor = -dy / max;
+      griff.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const los = () => {
+      id = null;
+      this.stick = { vor: 0, seit: 0, rennen: false, aktiv: false };
+      griff.style.transform = "";
+    };
+    basis.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      id = e.pointerId;
+      basis.setPointerCapture(e.pointerId);
+      this.stick.aktiv = true;
+      setzen(e);
+    });
+    basis.addEventListener("pointermove", (e) => { if (e.pointerId === id) { e.preventDefault(); setzen(e); } });
+    basis.addEventListener("pointerup", (e) => { if (e.pointerId === id) los(); });
+    basis.addEventListener("pointercancel", (e) => { if (e.pointerId === id) los(); });
+  }
+
+  /** Steuerknüppel nur im Begehen-Modus auf Touch-Geräten zeigen (?knueppel=1 erzwingt ihn) */
+  private knueppelZeigen() {
+    if (!this.stickEl) return;
+    const an = this.modus === "begehen" && (this.touch || new URLSearchParams(location.search).has("knueppel"));
+    this.stickEl.hidden = !an;
+    if (!an) this.stick = { vor: 0, seit: 0, rennen: false, aktiv: false };
+  }
+
   begehen(start?: { pos: number[]; ziel: number[]; fov?: number }) {
     this.modus = "begehen";
+    this.knueppelZeigen();
     this.orbit.enabled = false;
     if (start) {
       this.fuss.set(start.pos[0], start.pos[2], start.pos[1] - AUGE);
@@ -640,6 +693,7 @@ export class Szene {
   ansicht(k: { pos: number[]; ziel: number[]; fov?: number }, begehen: boolean) {
     if (begehen) return this.begehen(k);
     this.modus = "orbit";
+    this.knueppelZeigen();
     this.orbit.enabled = true;
     this.kamera.position.set(k.pos[0], k.pos[1], k.pos[2]);
     this.orbit.target.set(k.ziel[0], k.ziel[1], k.ziel[2]);
@@ -726,11 +780,12 @@ export class Szene {
     if (k.has("KeyS") || k.has("ArrowDown")) vor -= 1;
     if (k.has("KeyA")) seit -= 1;
     if (k.has("KeyD")) seit += 1;
+    if (this.stick.aktiv) { vor += this.stick.vor; seit += this.stick.seit; }
     if (k.has("ArrowLeft")) this.drehen(-dt * 400, 0, 0.004);
     if (k.has("ArrowRight")) this.drehen(dt * 400, 0, 0.004);
-    const tempo = (k.has("ShiftLeft") || k.has("ShiftRight") ? 2.6 : 1.4) * dt;
+    const tempo = (k.has("ShiftLeft") || k.has("ShiftRight") || this.stick.rennen ? 2.6 : 1.4) * dt * (this.stick.aktiv ? Math.min(1, Math.hypot(vor, seit)) : 1);
     const boxen = this.moebelBoxen();
-    if (vor || seit) {
+    if (Math.hypot(vor, seit) > 0.12) {
       this.laufZiel = null;
       const g = this.blick.gier;
       const fx = -Math.sin(g), fz = -Math.cos(g);
@@ -777,7 +832,7 @@ export class Szene {
     const dt = Math.min(0.05, this.uhr.getDelta());
     if (!this.aktiv || !this.haus) return;
     if (this.modus === "begehen") {
-      if (this.tasten.size || this.laufZiel || this.blickZiehen || document.pointerLockElement) {
+      if (this.tasten.size || this.laufZiel || this.blickZiehen || this.stick.aktiv || document.pointerLockElement) {
         const vorher = this.kamera.position.clone(), q = this.kamera.quaternion.clone();
         this.bewegen(dt);
         if (!vorher.equals(this.kamera.position) || !q.equals(this.kamera.quaternion)) this.neu();
