@@ -74,6 +74,13 @@ export const api = {
   },
   renderListe: () => fetch("/api/render").then(antwort),
   renderAbbrechen: (id: string) => fetch(`/api/render/${id}`, { method: "DELETE" }).then(antwort),
+  spielwelt: () => fetch("/api/spielwelt").then(antwort),
+  spielweltUebergeben: (glb: ArrayBuffer, welt: any) => {
+    const f = new FormData();
+    f.append("haus", new Blob([glb], { type: "model/gltf-binary" }), "haus.glb");
+    f.append("welt", JSON.stringify(welt));
+    return fetch("/api/spielwelt", { method: "POST", body: f }).then(antwort);
+  },
   freigaben: () => fetch("/api/freigaben").then(antwort),
   freigabeNeu: (d: any) =>
     fetch("/api/freigaben", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) }).then(antwort),

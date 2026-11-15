@@ -73,3 +73,22 @@ def test_freigabe_kennwort_wechsel_beendet_sitzung(client, monkeypatch):
     client.patch(f"/api/freigaben/{fid}", json={"kennwort": "Neu-Kennwort-888"})
     _extern(monkeypatch)
     assert client.get(f"/teilen/{fid}/api/modell").status_code == 401
+
+
+def test_spielwelt_uebergabe_und_token(client, monkeypatch):
+    assert client.get("/api/spielwelt").json()["version"] == 0
+    glb = b"glTF" + b"\x00" * 60
+    r = client.post("/api/spielwelt", files={"haus": ("haus.glb", glb, "model/gltf-binary")},
+                    data={"welt": '{"format": 1, "modell_version": 7, "moebel": []}'})
+    assert r.status_code == 200 and r.json()["version"] == 1 and r.json()["modell_version"] == 7
+    bad = client.post("/api/spielwelt", files={"haus": ("x.glb", b"nope", "model/gltf-binary")}, data={"welt": "{}"})
+    assert bad.status_code == 400
+    # ohne gesetztes Token kein Abruf
+    assert client.get("/spielwelt/haus.glb").status_code == 401
+    monkeypatch.setenv("PLANER_SPIELWELT_TOKEN", "geheim-123")
+    assert client.get("/spielwelt/haus.glb", headers={"Authorization": "Bearer falsch"}).status_code == 401
+    h = {"Authorization": "Bearer geheim-123"}
+    assert client.get("/spielwelt/haus.glb", headers=h).content == glb
+    assert client.get("/spielwelt/welt.json", headers=h).json()["modell_version"] == 7
+    assert client.get("/spielwelt/meta.json", headers=h).json()["version"] == 1
+    assert client.get("/spielwelt/schluessel", headers=h).status_code == 404

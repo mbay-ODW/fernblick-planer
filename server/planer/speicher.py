@@ -281,3 +281,24 @@ def auftraege_aufraeumen(tage: int = 14) -> None:
             for f in d.iterdir():
                 f.unlink(missing_ok=True)
             d.rmdir()
+
+
+# ---------------------------------------------------------------------------
+# Spielwelt (Übergabe an fernblick-spiele)
+# ---------------------------------------------------------------------------
+def spielwelt_meta() -> dict[str, Any]:
+    p = daten() / "spielwelt" / "meta.json"
+    return json.loads(p.read_text()) if p.exists() else {"version": 0}
+
+
+def spielwelt_ablegen(glb: bytes, welt: dict[str, Any], wer: str) -> dict[str, Any]:
+    d = daten() / "spielwelt"
+    d.mkdir(parents=True, exist_ok=True)
+    alt = spielwelt_meta()
+    (d / "haus.glb.tmp").write_bytes(glb)
+    (d / "haus.glb.tmp").replace(d / "haus.glb")
+    _schreiben(d / "welt.json", welt)
+    meta = {"version": int(alt.get("version", 0)) + 1, "zeit": jetzt(), "wer": wer, "groesse": len(glb),
+            "modell_version": welt.get("modell_version", 0)}
+    _schreiben(d / "meta.json", meta)
+    return meta

@@ -1,7 +1,7 @@
 # Fernblick-Planer – Stack für docker compose / Portainer
 # Oberfläche hinter einem Forward-Auth-Proxy (z. B. Traefik + Authelia, setzt Remote-User);
 # /mcp, OAuth-Token/Registrierung und /.well-known öffentlich (Bearer/OAuth); /teilen/ (Freigabe-Links mit eigenem
-# Kennwort, nur lesen) und /assets/ (statische Oberfläche) ebenfalls ohne Forward-Auth.
+# Kennwort, nur lesen), /assets/ (statische Oberfläche) und /spielwelt/ (Bearer-Token der Spiele-App) ohne Forward-Auth.
 # Alle umgebungsspezifischen Werte kommen aus Variablen (siehe deploy/.env.example), keine Vorgaben im Repo.
 # Daten (Modell, Versionen, Varianten, Bilder, Render-Aufträge, OAuth-SQLite) unter ${DATEN_PFAD}.
 name: ${STACK:-fernblick-planer}
@@ -20,6 +20,8 @@ x-planer: &planer
     # Benutzer mit Zugriff (Komma-getrennt), leer = alle beim Proxy angemeldeten
     PLANER_ALLOWED_USERS: ${ALLOWED_USERS:-}
     PLANER_RENDER_THREADS: ${RENDER_THREADS:-5}
+    # Lesezugang der Spiele-App auf die übergebene Spielwelt (/spielwelt/*, Bearer-Token); leer = aus
+    PLANER_SPIELWELT_TOKEN: ${SPIELWELT_TOKEN:-}
     TZ: Europe/Berlin
   volumes:
     - ${DATEN_PFAD:?DATEN_PFAD fehlt}/data:/data
@@ -39,7 +41,7 @@ services:
       - traefik.http.routers.${STACK:-fernblick-planer}.entrypoints=websecure
       - traefik.http.routers.${STACK:-fernblick-planer}.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER fehlt}
       - traefik.http.routers.${STACK:-fernblick-planer}.middlewares=${TRAEFIK_MIDDLEWARES_WEB:?TRAEFIK_MIDDLEWARES_WEB fehlt (Forward-Auth-Middleware)}
-      - traefik.http.routers.${STACK:-fernblick-planer}-public.rule=Host(`${PLANER_HOST:?PLANER_HOST fehlt}`) && (Path(`/mcp`) || PathPrefix(`/.well-known/`) || Path(`/oauth/token`) || Path(`/oauth/register`) || Path(`/api/health`) || PathPrefix(`/teilen/`) || PathPrefix(`/assets/`))
+      - traefik.http.routers.${STACK:-fernblick-planer}-public.rule=Host(`${PLANER_HOST:?PLANER_HOST fehlt}`) && (Path(`/mcp`) || PathPrefix(`/.well-known/`) || Path(`/oauth/token`) || Path(`/oauth/register`) || Path(`/api/health`) || PathPrefix(`/teilen/`) || PathPrefix(`/assets/`) || PathPrefix(`/spielwelt/`))
       - traefik.http.routers.${STACK:-fernblick-planer}-public.priority=100
       - traefik.http.routers.${STACK:-fernblick-planer}-public.entrypoints=websecure
       - traefik.http.routers.${STACK:-fernblick-planer}-public.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER fehlt}

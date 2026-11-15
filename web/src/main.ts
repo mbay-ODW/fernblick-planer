@@ -1029,6 +1029,24 @@ class App {
     c.append(h("p", { class: "dezent" }, "Ansichten werden mit dem Modell gespeichert. Claude kann über den MCP weitere anlegen (ansicht_setzen)."));
   }
 
+  /** Spieldaten zur übergebenen Hauswelt: Geschosse, Räume, Möbel (ohne Preise/Notizen), Startpunkt, Lichtszenarien */
+  private spielweltDaten(): any {
+    const m = this.modell;
+    const og = (m.geschosse ?? []).find((g: any) => g.id === "OG");
+    return {
+      format: 1,
+      modell_version: m.meta?.version ?? 0,
+      geschosse: { EG: 0, OG: og?.z ?? 2.81 },
+      start: m.ansichten?.[0]?.kamera ?? { pos: [6.6, 1.65, 4.6], ziel: [3.0, 1.4, 9.0] },
+      raeume: (m.raeume ?? []).map((r: any) => ({ id: r.id, name: r.name, geschoss: r.geschoss, polygon: r.polygon })),
+      moebel: (m.moebel ?? []).map((x: any) => ({ id: x.id, typ: x.typ, name: x.name, raum: x.raum, geschoss: x.geschoss,
+        pos: x.pos, masse_bth: x.masse_bth, rot_grad: x.rot_grad ?? 0, z: x.z ?? 0 })),
+      szenarien: (m.szenarien ?? []).map((x: any) => ({ id: x.id, name: x.name, leuchten: x.leuchten })),
+      leuchten: (m.leuchten ?? []).map((l: any) => ({ id: l.id, name: l.name, typ: l.typ, geschoss: l.geschoss, raum: l.raum,
+        pos: l.pos, punkte: l.punkte, z: l.z, lumen: l.lumen, kelvin: l.kelvin })),
+    };
+  }
+
   /** Freigabe-Links: passwortgeschützte Nur-Lese-Ansicht für Externe */
   private async tabTeilen(c: HTMLElement) {
     c.append(h("p", { class: "dezent" }, "Link mit eigenem Kennwort: Haus ansehen, drehen, begehen, messen und Ansichten anspringen – ohne etwas ändern zu können. Preise und Planungsnotizen sind ausgeblendet."));
@@ -1059,6 +1077,23 @@ class App {
       } }, "Link anlegen")));
     const liste = h("div", {});
     c.append(h("h4", {}, "Bestehende Links"), liste);
+    const sw = h("div", {});
+    c.append(h("h4", {}, "Spielwelt (fernblickspiel.bay-ram.de)"), sw);
+    api.spielwelt().then((st: any) => {
+      sw.append(h("p", { class: "dezent" }, st.version ? `Übergeben: Stand v${st.modell_version} am ${zeitText(st.zeit)} (${Math.round(st.groesse / 1024)} kB)` : "Noch nicht übergeben."),
+        h("div", { class: "zeile" }, h("button", { onclick: async (e: Event) => {
+          const b = e.target as HTMLButtonElement;
+          b.disabled = true;
+          b.textContent = "exportiere …";
+          try {
+            const glb = await this.szene.exportSpielwelt();
+            await api.spielweltUebergeben(glb, this.spielweltDaten());
+            toast("Spielwelt übergeben", "info");
+            this.seiteNeu();
+          } catch (err) { toast((err as Error).message, "fehler"); b.disabled = false; b.textContent = "Spielwelt übergeben"; }
+        } }, "Spielwelt übergeben")),
+        h("p", { class: "dezent" }, "Übergibt den aktuellen Stand (3D-Haus und Möbelpositionen) an die Spiele-App. Spätere Planer-Änderungen sehen die Kinder erst nach erneutem Übergeben."));
+    }).catch(() => {});
     const [fr, varianten] = await Promise.all([api.freigaben(), api.varianten().catch(() => [])]);
     for (const v of varianten) stand.append(h("option", { value: v.slug }, `Variante: ${v.name}`));
     if (!fr.length) liste.append(h("p", { class: "dezent" }, "Noch keine Links."));

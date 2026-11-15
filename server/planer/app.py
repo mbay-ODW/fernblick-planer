@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hmac
 import html
+import json
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -262,6 +264,41 @@ def oauth_authorize_post(request: Request, client_id: str = Form(...), redirect_
 
 app.router.routes.append(Route("/mcp", endpoint=McpEndpunkt(), methods=["GET", "POST", "DELETE"]))
 
+# --- Spielwelt für fernblick-spiele ------------------------------------------------
+@app.get("/api/spielwelt")
+def spielwelt_stand(wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
+    return speicher.spielwelt_meta()
+
+
+@app.post("/api/spielwelt")
+async def spielwelt_uebergeben(haus: UploadFile = File(...), welt: str = Form(...),
+                               wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
+    glb = await haus.read()
+    if glb[:4] != b"glTF":
+        raise ValueError("keine GLB-Datei")
+    return speicher.spielwelt_ablegen(glb, json.loads(welt), wer)
+
+
+def _spielwelt_token(request: Request) -> None:
+    soll = os.environ.get("PLANER_SPIELWELT_TOKEN", "")
+    ist = request.headers.get("authorization", "")
+    if not soll or not hmac.compare_digest(ist.encode(), f"Bearer {soll}".encode()):
+        raise HTTPException(401, "Token fehlt oder ist falsch")
+
+
+@app.get("/spielwelt/{datei}", include_in_schema=False)
+def spielwelt_datei(datei: str, request: Request) -> Response:
+    _spielwelt_token(request)
+    if datei not in ("meta.json", "haus.glb", "welt.json"):
+        raise HTTPException(404)
+    if datei == "meta.json":
+        return JSONResponse(speicher.spielwelt_meta())
+    p = speicher.daten() / "spielwelt" / datei
+    if not p.exists():
+        raise HTTPException(404, "Noch keine Spielwelt übergeben")
+    return FileResponse(p, media_type="model/gltf-binary" if datei.endswith(".glb") else "application/json")
+
+
 # --- Freigabe-Links (Nur-Lese-Ansicht für Externe) ---------------------------------
 @app.get("/api/freigaben")
 def freigaben(wer: str = Depends(auth.angemeldet)) -> list[dict[str, Any]]:
@@ -370,7 +407,7 @@ if (WEB / "index.html").exists():
 
     @app.get("/{pfad:path}", include_in_schema=False)
     def oberflaeche(pfad: str, request: Request) -> Response:
-        if pfad.startswith(("api/", "mcp", "oauth/", "teilen/")):
+        if pfad.startswith(("api/", "mcp", "oauth/", "teilen/", "spielwelt/")):
             raise HTTPException(404)
         if not auth.benutzer_aus_proxy(request):
             return HTMLResponse(f"<p>Bitte über {auth.basis_url()} anmelden.</p>", status_code=401)

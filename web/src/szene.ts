@@ -823,6 +823,21 @@ export class Szene {
     return blob;
   }
 
+  /** Ganzes Haus (alle Geschosse, Dach, Möbel, Leuchten) als GLB für die Spiele-App; Ansicht bleibt unverändert. */
+  async exportSpielwelt(): Promise<ArrayBuffer> {
+    const alt = { geschoss: this.geschoss, dach: this.dachZeigen };
+    this.geschoss = "alle";
+    this.dachZeigen = true;
+    this.sichtbarkeit();
+    try {
+      return await this.exportGlb();
+    } finally {
+      this.geschoss = alt.geschoss;
+      this.dachZeigen = alt.dach;
+      this.sichtbarkeit();
+    }
+  }
+
   /** Sichtbare Szene (ohne Himmel, Lichter, Hilfslinien) als GLB für Cycles. */
   async exportGlb(): Promise<ArrayBuffer> {
     const versteckt: THREE.Object3D[] = [];
