@@ -532,7 +532,20 @@ function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number, m: any
       mk(p, h, 0.08, rahmen, o.u1 - p / 2, zc);
       const felder = o.typ === "hebeschiebetuer" ? 2 : o.typ === "festverglasung" ? Math.max(1, Math.round(b / 1.7)) : 1;
       for (let i = 1; i < felder; i++) mk(p * 1.4, h, 0.09, rahmen, o.u0 + (b * i) / felder, zc);
-      glasScheibe(uc, zc, b - p, h - p);
+      if (o.typ === "hebeschiebetuer") {
+        // Festes Feld links, Schiebeflügel rechts (innen vorgesetzt); für die Spiele als öffenbar markiert
+        glasScheibe(o.u0 + b / 4, zc, b / 2 - p, h - p);
+        const fb = b / 2 - p * 0.6, fh = h - p * 1.2;
+        const fluegel = mk(fb, fh, 0.012, glas, o.u0 + (3 * b) / 4 - p * 0.2, zc, innen * 0.035, false);
+        for (const [bw, bh, x, y] of [[fb, p, 0, fh / 2 - p / 2], [fb, p, 0, -fh / 2 + p / 2], [p, fh, -fb / 2 + p / 2, 0], [p, fh, fb / 2 - p / 2, 0]]) {
+          const r = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.05), rahmen);
+          r.position.set(x, y, 0);
+          r.castShadow = true;
+          fluegel.add(r);
+        }
+        const richtung = new THREE.Vector3(-1, 0, 0).transformDirection(M);
+        fluegel.userData = { art: "glas", schiebe: true, oeffnung: o.id, richtung: [richtung.x, richtung.z], weg: b / 2 - p };
+      } else glasScheibe(uc, zc, b - p, h - p);
       if (o.typ === "fenster" && o.z0 > w.z0 + 0.3) {
         // Fensterbank innen (Material/Farbe aus oberflaechen.fensterbank, je Fenster abschaltbar mit fensterbank: false)
         const fb = { material: "Holz", farbe_hex: "#b98c55", dicke: 0.03, ueberstand: 0.03, ...(m.oberflaechen?.fensterbank ?? {}), ...(typeof o.daten.fensterbank === "object" ? o.daten.fensterbank : {}) };
@@ -549,7 +562,11 @@ function oeffnungenAusstatten(w: WandInfo, g: THREE.Group, innen: number, m: any
       mk(p, h, 0.09, rahmen, o.u0 + p / 2, zc);
       mk(p, h, 0.09, rahmen, o.u1 - p / 2, zc);
       mk(p, h, 0.09, rahmen, o.u0 + tb, zc);
-      mk(tb - p, h - p, 0.06, mat("#2f3133", "glatt", { name: "Haustür" }), o.u0 + tb / 2 + p / 4, zc - p / 2);
+      const blatt = mk(tb - p, h - p, 0.06, mat("#2f3133", "glatt", { name: "Haustür" }), o.u0 + tb / 2 + p / 4, zc - p / 2);
+      // Für die Spiele: Türblatt mit Scharnier (Weltkoordinaten three x/z) und Richtung nach innen
+      const sch = new THREE.Vector3(o.u0 + (3 * p) / 4, 0, 0).applyMatrix4(M);
+      const nach = new THREE.Vector3(0, 0, innen).transformDirection(M);
+      blatt.userData = { art: "tuer_blatt", oeffnung: o.id, scharnier: [sch.x, sch.z], innen: [nach.x, nach.z] };
       const st = mk(b - tb - p, h - p, 0.02, mat("#eef2f2", "glatt", { name: "Milchglas" }), o.u0 + tb + (b - tb) / 2, zc - p / 2, 0, false);
       st.userData = { art: "glas" };
     } else if (o.typ === "tuer") {
