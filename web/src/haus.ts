@@ -2,6 +2,8 @@
 // Modellkoordinaten: x nach Osten, y nach Süden, z nach oben. three.js: X = x, Y = z, Z = y.
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { aussenanlageBauen } from "./aussen";
+import { BASIS } from "./api";
 import { mat, nachNormaleTeilen, artAusMaterial, Art, bodenMaterial } from "./material";
 
 export type P2 = [number, number];
@@ -1355,18 +1357,9 @@ export function hausBauen(m: any): HausErgebnis {
   sockelleisten(m, M, waende, weg, teile);
   stellbretter(m, M, waende, teile, ogPoly);
 
-  // Außenanlage: Terrasse 4 m, Hof im Osten, Wiese
+  // Außenanlage wie im Website-Modell (Gelände, Terrasse mit Gartentreppe, Hof mit Mauer, Hecke, Bäume, Zaun, Panorama)
   {
-    const terr = mat("#9a7b5c", "holz", { name: "Terrasse Holz" });
-    teile.aussen.add(box(M.W + 0.72, 0.06, 4.0, terr, M.W / 2, M.L + 0.36 + 2.0, -0.03));
-    teile.aussen.add(box(9, 0.04, M.L + 6, mat("#a9a49b", "beton", { name: "Hof Pflaster" }), M.W + 0.36 + 4.5, M.L / 2, -0.04));
-    const wiese = new THREE.Mesh(new THREE.CircleGeometry(160, 64), mat("#6f8a4f", "gras", { name: "Wiese" }));
-    wiese.rotation.x = -Math.PI / 2;
-    wiese.position.set(M.W / 2, -0.08, M.L / 2);
-    (wiese.material as THREE.MeshStandardMaterial).map?.repeat.set(80, 80);
-    wiese.receiveShadow = true;
-    wiese.userData.keinSchatten = true;
-    teile.aussen.add(wiese);
+    aussenanlageBauen(m, teile.aussen, BASIS);
     // Odenwald-Hügel am Horizont
     const hm = mat("#4f6644", "glatt", { name: "Hügel" });
     const ring = new THREE.CylinderGeometry(420, 420, 1, 160, 1, true);
@@ -1376,7 +1369,7 @@ export function hausBauen(m: any): HausErgebnis {
         const a = Math.atan2(pos.getZ(i), pos.getX(i));
         const h = 18 + 14 * Math.sin(a * 3 + 1) + 9 * Math.sin(a * 7 + 2) + 5 * Math.sin(a * 13);
         pos.setY(i, Math.max(6, h));
-      } else pos.setY(i, -2);
+      } else pos.setY(i, -40);
     }
     ring.computeVertexNormals();
     const hue = new THREE.Mesh(ring, hm);

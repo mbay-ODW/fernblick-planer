@@ -302,3 +302,27 @@ def spielwelt_ablegen(glb: bytes, welt: dict[str, Any], wer: str) -> dict[str, A
             "modell_version": welt.get("modell_version", 0)}
     _schreiben(d / "meta.json", meta)
     return meta
+
+
+# --- Umgebung: Foto-Panorama der Aussicht (nur im Datenordner, nicht im Repo) -------------------
+PANORAMA_STANDARD = {"bogen_grad": 95, "mitte_grad": 0, "horizont": 0.6, "abstand": 45, "auge": [3.9, 13.6, 1.45]}
+
+
+def panorama_pfad() -> Path:
+    return daten() / "umgebung" / "panorama.jpg"
+
+
+def panorama_ablegen(inhalt: bytes, verhaeltnis: float, wer: str) -> dict[str, Any]:
+    """Legt das Panorama ab und trägt es (mit bisherigen Einstellungen) in model.umgebung.panorama ein."""
+    d = daten() / "umgebung"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "panorama.jpg.tmp").write_bytes(inhalt)
+    (d / "panorama.jpg.tmp").replace(panorama_pfad())
+
+    def setzen(m: dict[str, Any]) -> None:
+        u = m.setdefault("umgebung", {})
+        alt = u.get("panorama") or {}
+        u["panorama"] = {**PANORAMA_STANDARD, **alt, "verhaeltnis": round(verhaeltnis, 4),
+                         "version": int(alt.get("version", 0)) + 1}
+
+    return aendern(setzen, wer, "Panorama der Aussicht hochgeladen")["umgebung"]["panorama"]

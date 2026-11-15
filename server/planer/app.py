@@ -264,6 +264,47 @@ def oauth_authorize_post(request: Request, client_id: str = Form(...), redirect_
 
 app.router.routes.append(Route("/mcp", endpoint=McpEndpunkt(), methods=["GET", "POST", "DELETE"]))
 
+# --- Umgebung: Panorama -------------------------------------------------------------
+def _jpeg_verhaeltnis(inhalt: bytes) -> float:
+    """Höhe/Breite aus dem JPEG-Kopf (SOF-Marker), ohne Bildbibliothek."""
+    i = 2
+    while i + 9 < len(inhalt):
+        if inhalt[i] != 0xFF:
+            i += 1
+            continue
+        marker = inhalt[i + 1]
+        laenge = int.from_bytes(inhalt[i + 2:i + 4], "big")
+        if marker in (0xC0, 0xC1, 0xC2):
+            h = int.from_bytes(inhalt[i + 5:i + 7], "big")
+            w = int.from_bytes(inhalt[i + 7:i + 9], "big")
+            if w:
+                return h / w
+        i += 2 + laenge
+    raise ValueError("JPEG-Größe nicht lesbar")
+
+
+@app.post("/api/umgebung/panorama")
+async def panorama_hochladen(datei: UploadFile = File(...), wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
+    inhalt = await datei.read()
+    if len(inhalt) > 25_000_000:
+        raise HTTPException(413, "Bild zu groß")
+    if inhalt[:3] != b"\xff\xd8\xff":
+        raise ValueError("Bitte ein JPEG hochladen")
+    return speicher.panorama_ablegen(inhalt, _jpeg_verhaeltnis(inhalt), wer)
+
+
+def _panorama_datei() -> FileResponse:
+    p = speicher.panorama_pfad()
+    if not p.exists():
+        raise HTTPException(404, "Kein Panorama hochgeladen")
+    return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=604800"})
+
+
+@app.get("/api/umgebung/panorama.jpg")
+def panorama(wer: str = Depends(auth.angemeldet)) -> FileResponse:
+    return _panorama_datei()
+
+
 # --- Spielwelt für fernblick-spiele ------------------------------------------------
 @app.get("/api/spielwelt")
 def spielwelt_stand(wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
@@ -386,6 +427,12 @@ def teilen_modell(fid: str, request: Request) -> dict[str, Any]:
 def teilen_version(fid: str, request: Request) -> dict[str, Any]:
     f = _teilen_sitzung(fid, request)
     return {"version": freigabe.modell_fuer(f)["meta"]["version"]}
+
+
+@app.get("/teilen/{fid}/api/umgebung/panorama.jpg", include_in_schema=False)
+def teilen_panorama(fid: str, request: Request) -> FileResponse:
+    _teilen_sitzung(fid, request)
+    return _panorama_datei()
 
 
 @app.get("/teilen/{fid}", include_in_schema=False)

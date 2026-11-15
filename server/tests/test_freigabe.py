@@ -92,3 +92,27 @@ def test_spielwelt_uebergabe_und_token(client, monkeypatch):
     assert client.get("/spielwelt/welt.json", headers=h).json()["modell_version"] == 7
     assert client.get("/spielwelt/meta.json", headers=h).json()["version"] == 1
     assert client.get("/spielwelt/schluessel", headers=h).status_code == 404
+
+
+def _mini_jpeg(w: int, h: int) -> bytes:
+    """Nur Kopf (SOI, APP0, SOF0) – reicht für Ablage und Seitenverhältnis."""
+    app0 = b"\xff\xe0" + (16).to_bytes(2, "big") + b"JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    sof = b"\xff\xc0" + (17).to_bytes(2, "big") + b"\x08" + h.to_bytes(2, "big") + w.to_bytes(2, "big") + b"\x03" + b"\x01\x11\x00\x02\x11\x01\x03\x11\x01"
+    return b"\xff\xd8" + app0 + sof + b"\xff\xd9"
+
+
+def test_panorama_und_zaun(client, monkeypatch):
+    m = client.get("/api/modell").json()
+    assert any(f["typ"] == "zaun_staketen" for f in m["feste_elemente"])
+    assert client.get("/api/umgebung/panorama.jpg").status_code == 404
+    assert client.post("/api/umgebung/panorama", files={"datei": ("p.png", b"\x89PNG....", "image/png")}).status_code == 400
+    p = client.post("/api/umgebung/panorama", files={"datei": ("p.jpg", _mini_jpeg(2000, 1340), "image/jpeg")}).json()
+    assert p["version"] == 1 and p["verhaeltnis"] == 0.67 and p["bogen_grad"] == 95
+    assert client.get("/api/modell").json()["umgebung"]["panorama"]["version"] == 1
+    assert client.get("/api/umgebung/panorama.jpg").content[:2] == b"\xff\xd8"
+    # Freigabe: nur mit Sitzung
+    fid = client.post("/api/freigaben", json={"name": "Kinder", "kennwort": "Eiche-Linde-1234"}).json()["id"]
+    _extern(monkeypatch)
+    assert client.get(f"/teilen/{fid}/api/umgebung/panorama.jpg").status_code == 401
+    client.post(f"/teilen/{fid}/anmelden", data={"kennwort": "Eiche-Linde-1234"})
+    assert client.get(f"/teilen/{fid}/api/umgebung/panorama.jpg").status_code == 200

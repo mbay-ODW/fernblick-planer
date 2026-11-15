@@ -794,6 +794,35 @@ class App {
       h("select", { onchange: (e: Event) => this.aendern((m) => (m.oberflaechen.fassade = { ...fa, material: (e.target as HTMLSelectElement).value }), "haus", "Fassade Material") },
         ...["Holzschalung senkrecht", "Putz", "Beton", "Glatt"].map((x) => h("option", { value: x, selected: x === fa.material }, x)))));
 
+    // Aussicht: Foto-Panorama hinter der Glasfront
+    const pa = this.modell.umgebung?.panorama;
+    const setzePa = (neu: any, notiz: string) => this.aendern((m) => (m.umgebung.panorama = { ...m.umgebung.panorama, ...neu }), "haus", notiz);
+    const regler = (titel: string, k: string, min: number, max: number, schritt: number, wert: number) =>
+      h("label", { class: "regler" }, h("span", { class: "dezent" }, titel),
+        h("input", { type: "range", min, max, step: schritt, value: wert, onchange: (e: Event) => setzePa({ [k]: Number((e.target as HTMLInputElement).value) }, `Panorama ${titel}`) }));
+    c.append(h("h4", {}, "Aussicht (Panorama)"),
+      h("div", { class: "zeile" },
+        h("input", { type: "file", accept: "image/jpeg", onchange: async (e: Event) => {
+          const d = (e.target as HTMLInputElement).files?.[0];
+          if (!d) return;
+          try {
+            if (this.ungespeichert) await this.speichern();
+            await api.panoramaHochladen(d);
+            await this.neuLaden();
+            toast("Panorama übernommen", "ok");
+          } catch (err) {
+            toast(`Panorama: ${(err as Error).message}`, "fehler");
+          }
+        } }),
+        pa ? h("span", { class: "dezent" }, `Stand ${pa.version}`) : h("span", { class: "dezent" }, "noch keins")));
+    if (pa)
+      c.append(h("div", { class: "spalte" },
+        regler("Drehung °", "mitte_grad", -60, 60, 1, pa.mitte_grad ?? 0),
+        regler("Breite °", "bogen_grad", 50, 200, 1, pa.bogen_grad ?? 95),
+        regler("Horizont", "horizont", 0.3, 0.9, 0.01, pa.horizont ?? 0.6),
+        regler("Abstand m", "abstand", 20, 150, 1, pa.abstand ?? 45)),
+        h("p", { class: "dezent" }, "Panorama als JPEG (Blick von der Terrasse nach Süden, links = Osten). Drehung und Breite so einstellen, dass Horizont und Bäume zur Glasfront passen."));
+
     c.append(h("h4", {}, `Einzelne Flächen (${(ob.flaechen ?? []).length})`));
     for (const f of ob.flaechen ?? []) {
       const titel = f.art === "boden" ? `Boden ${this.modell.raeume.find((r: any) => r.id === f.raum)?.name ?? f.raum}` : `${f.wand ?? f.element ?? f.id}${f.seite ? " · " + f.seite : ""}`;

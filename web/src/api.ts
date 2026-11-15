@@ -25,6 +25,8 @@ async function antwort(r: Response): Promise<any> {
 /** Freigabe-Link (/teilen/<id>/): Nur-Lese-Ansicht, Daten kommen über die Freigabe-Endpunkte */
 export const TEILEN: string | null = location.pathname.match(/^\/teilen\/([A-Za-z0-9_-]+)/)?.[1] ?? null;
 const T = TEILEN ? `/teilen/${TEILEN}` : "";
+/** Pfad-Präfix für Lesezugriffe (leer oder /teilen/<id>) */
+export const BASIS = T;
 
 export const api = {
   ich: () => (TEILEN ? Promise.resolve({ benutzer: "" }) : fetch("/api/ich").then(antwort)),
@@ -80,6 +82,11 @@ export const api = {
     f.append("haus", new Blob([glb], { type: "model/gltf-binary" }), "haus.glb");
     f.append("welt", JSON.stringify(welt));
     return fetch("/api/spielwelt", { method: "POST", body: f }).then(antwort);
+  },
+  panoramaHochladen: (datei: Blob) => {
+    const f = new FormData();
+    f.append("datei", datei, "panorama.jpg");
+    return fetch("/api/umgebung/panorama", { method: "POST", body: f }).then(antwort);
   },
   freigaben: () => fetch("/api/freigaben").then(antwort),
   freigabeNeu: (d: any) =>

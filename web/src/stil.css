@@ -276,3 +276,6 @@ body.nurlesen #eigenschaften { display: none !important; }
 #tabinhalt .eintrag.freigabe { flex-wrap: wrap; }
 #tabinhalt .eintrag.freigabe .name { flex-basis: 100%; }
 #tabinhalt .eintrag.freigabe.aus .name { opacity: .5; text-decoration: line-through; }
+.spalte { display: flex; flex-direction: column; gap: 4px; }
+.regler { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; }
+.regler input[type="range"] { width: 100%; }

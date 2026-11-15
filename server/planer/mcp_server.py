@@ -350,7 +350,9 @@ def bauteil_setzen(sammlung: str, eintraege: list[dict[str, Any]], notiz: str = 
     Öffnungen (typ tuer): aufschlag = Raum-ID, in den die Tür aufschlägt.
     Holzbau (feste_elemente): typ "balkenlage" (EG-Decke) mit hoehe und balken = [{von: [x, y], bis: [x, y], b, art}]
     (Achsen, art z. B. Deckenbalken/Unterzug) ersetzt das angenommene Balkenraster; typ "sparrenlage" mit
-    y = [Achsen der Sparren ab Nordwand], b, h. Beides zeigt der 2D-Plan mit dem Schalter „Balken“."""
+    y = [Achsen der Sparren ab Nordwand], b, h. Beides zeigt der 2D-Plan mit dem Schalter „Balken“.
+    Außen (feste_elemente): typ "zaun_staketen" mit punkte = [[x, y], …] (Verlauf, folgt dem Gelände), hoehe,
+    lattenabstand (lichte Weite, m), farbe_hex."""
     if sammlung not in ("raeume", "waende", "oeffnungen", "feste_elemente"):
         raise ValueError("sammlung muss raeume, waende, oeffnungen oder feste_elemente sein")
 

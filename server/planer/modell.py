@@ -381,9 +381,21 @@ def normalisieren(modell: dict[str, Any]) -> dict[str, Any]:
         m["bibliothek"] += [v for v in wandleuchten() + medien() + ecksofas() + haushalt() + ikea()
                               if v["vorlage_id"] not in vorhanden]
         meta["bibliothek_stand"] = BIBLIOTHEK_STAND
+    if not meta.get("zaun_ergaenzt"):
+        if not any(f.get("typ") == "zaun_staketen" for f in m.get("feste_elemente", [])):
+            m.setdefault("feste_elemente", []).append(standard_zaun())
+        meta["zaun_ergaenzt"] = True
     m.setdefault("einstellungen", {"breitengrad": 49.654, "laengengrad": 9.077, "datum": "2026-06-21",
                                    "uhrzeit": "17:00", "szenario": "aus", "belichtung": 1.0})
     return m
+
+
+def standard_zaun() -> dict[str, Any]:
+    """Staketenzaun Kastanie (100 cm, Lattenabstand 8 cm, 85 m bestellt). Verlauf angenommen: Süd- und
+    Westgrenze des Gartens – mit bauteil_setzen (punkte) an den echten Verlauf anpassen."""
+    return {"id": "zaun-staketen", "typ": "zaun_staketen", "name": "Staketenzaun Kastanie", "hoehe": 1.0,
+            "lattenabstand": 0.08, "punkte": [[15.34, 21.14], [-6.11, 21.14], [-6.11, -4.96]],
+            "quelle": "Bestellung Adéquat 16.08.2026 (100 cm, 85 m); Verlauf angenommen", "sicher": False}
 
 
 def pruefen(modell: dict[str, Any]) -> list[str]:
