@@ -48,6 +48,8 @@ export class Szene {
   modus: "orbit" | "begehen" = "orbit";
   geschoss: Geschossfilter = "alle";
   dachZeigen = false;
+  /** Nur-Lese-Ansicht (Freigabe-Link): kein Auswählen, Ziehen oder Malen */
+  gesperrt = false;
   pinsel = false;
   /** Messen in 3D: zwei Klicks auf Oberflächen; rastet an Ecken der getroffenen Fläche ein (Alt = frei). */
   messen = false;
@@ -423,7 +425,7 @@ export class Szene {
         return;
       }
       if (e.button !== 0) return;
-      if (this.messen) return;
+      if (this.messen || this.gesperrt) return;
       const mid = t?.object.userData.moebelId;
       if (this.pinsel && t) {
         this.pinselTreffer(t);

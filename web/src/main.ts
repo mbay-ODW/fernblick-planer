@@ -1,6 +1,6 @@
 // Fernblick-Planer – Oberfläche: Plan 2D / 3D / Rendering
 import "./stil.css";
-import { api, KonfliktFehler } from "./api";
+import { api, KonfliktFehler, TEILEN } from "./api";
 import { h, leeren, toast, zahl, zeitText, frage } from "./dom";
 import { Szene, Geschossfilter, Bauteil } from "./szene";
 import { bauteilFinden, bauteilVerschieben } from "./bauteile";
@@ -44,8 +44,10 @@ class App {
   auswahl: string | null = null;
   bauteil: Bauteil | null = null;
   hinweise: Hinweis[] = [];
-  tab = "moebel";
+  tab = TEILEN ? "ansichten" : "moebel";
   ich = "";
+  /** Freigabe-Link: nur ansehen (Lichtstimmung/Tageszeit nur lokal, nichts wird gespeichert) */
+  nurLesen = !!TEILEN;
   speichernTimer = 0;
   speichertGerade = false;
   ungespeichert = false;
@@ -85,11 +87,20 @@ class App {
       bauteilFertig: (b) => this.aendern(() => {}, "haus", `${b.id} verschoben`),
     });
     this.render = new RenderAnsicht(document.getElementById("ansichtRender")!, this);
+    if (this.nurLesen) {
+      this.plan.gesperrt = true;
+      this.szene.gesperrt = true;
+      document.body.classList.add("nurlesen");
+    }
     // Schmale Bildschirme (Handy): Seitenleiste zu Beginn geschlossen, Bühne sichtbar
     if (SCHMAL) document.getElementById("app")!.classList.add("ohneSeite");
     this.modell = await api.modell();
     this.basis = this.modell.meta.version;
     this.stand = JSON.stringify(this.modell);
+    if (this.nurLesen) {
+      document.getElementById("benutzer")!.textContent = `Ansicht für ${this.modell.freigabe?.name ?? "Gäste"}`;
+      document.title = "Ferienhaus Fernblick";
+    }
     this.szene.laden(this.modell);
     this.szene.begehen(this.modell.ansichten?.[0]?.kamera);
     this.szene.umschauen();
@@ -108,6 +119,13 @@ class App {
   // Änderungen, Rückgängig, Speichern, Abgleich mit MCP-Änderungen
   // ---------------------------------------------------------------------------
   aendern(fn: (m: any) => void, art: Art, notiz: string, rueckgaengig = true) {
+    if (this.nurLesen) {
+      // Gäste dürfen nur Tageszeit und Lichtstimmung lokal umstellen
+      if (art !== "einstellungen") return;
+      fn(this.modell);
+      this.neuZeichnen(art);
+      return;
+    }
     if (rueckgaengig) {
       this.rueckListe.push(this.stand);
       if (this.rueckListe.length > 120) this.rueckListe.shift();
@@ -175,6 +193,7 @@ class App {
   }
 
   speichernPlanen() {
+    if (this.nurLesen) return;
     this.ungespeichert = true;
     this.status();
     window.clearTimeout(this.speichernTimer);
@@ -182,6 +201,7 @@ class App {
   }
 
   async speichern(erzwingen = false) {
+    if (this.nurLesen) return;
     if (this.speichertGerade) {
       this.speichernPlanen();
       return;
@@ -278,6 +298,7 @@ class App {
   }
 
   bauteilWaehlen(b: Bauteil | null) {
+    if (this.nurLesen && b) return;
     this.auswahl = null;
     this.bauteil = b;
     this.szene.markieren(null);
@@ -288,6 +309,7 @@ class App {
   }
 
   waehlen(id: string | null) {
+    if (this.nurLesen && id) return;
     this.auswahl = id;
     this.bauteil = null;
     this.szene.markieren(id);
@@ -468,6 +490,9 @@ class App {
     else if (this.messen) t.textContent = this.modus === "2d"
       ? "Messen: Anfangs- und Endpunkt anklicken · rastet an Ecken/Kanten ein (Alt = frei, Umschalt = waagrecht/senkrecht) · ziehen = verschieben · Esc löscht/beendet"
       : "Messen: zwei Punkte auf Flächen anklicken · rastet an Ecken ein (Alt = frei) · ziehen = drehen · Esc löscht/beendet";
+    else if (this.nurLesen) t.textContent = this.modus === "2d" ? "Ziehen = Plan verschieben · Mausrad/zwei Finger = zoomen · 📏 Messen"
+      : this.szene.modus === "begehen" ? "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Klick auf Boden = hingehen"
+      : "Ziehen = drehen · Rechts/zwei Finger = verschieben · Rad = zoomen · „Begehen“ zum Durchlaufen";
     else if (this.modus === "2d") t.textContent = "Ziehen = verschieben (Alt = 1 cm) · Griff = drehen (Umschalt = frei) · R/Q/E drehen · Entf löschen · Strg+D duplizieren · Mausrad zoomt";
     else if (this.szene.modus === "begehen") t.textContent = "W A S D laufen (Umschalt = schneller) · ziehen = umschauen · Doppelklick = Maus fangen (Esc lösen) · Klick auf Boden = hingehen · Klick auf Möbel = auswählen";
     else t.textContent = "Ziehen = drehen · Rechts/zwei Finger = verschieben · Rad = zoomen · Möbel anklicken und ziehen · R/Q/E drehen";
@@ -476,6 +501,7 @@ class App {
   private tasten() {
     window.addEventListener("keydown", (e) => {
       if ((e.target as HTMLElement)?.closest?.("input,textarea,select")) return;
+      if (this.nurLesen && e.key !== "Escape" && e.key.toLowerCase() !== "m") return;
       const strg = e.ctrlKey || e.metaKey;
       if (strg && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? this.wiederholen() : this.rueckgaengig(); return; }
       if (strg && e.key.toLowerCase() === "y") { e.preventDefault(); this.wiederholen(); return; }
@@ -617,7 +643,7 @@ class App {
     leeren(c);
     const f: Record<string, () => void> = {
       moebel: () => this.tabMoebel(c), katalog: () => this.tabKatalog(c), farben: () => this.tabFarben(c), licht: () => this.tabLicht(c),
-      ansichten: () => this.tabAnsichten(c), staende: () => this.tabStaende(c),
+      ansichten: () => this.tabAnsichten(c), staende: () => this.tabStaende(c), teilen: () => this.tabTeilen(c),
     };
     f[this.tab]?.();
     c.scrollTop = scroll;
@@ -835,6 +861,7 @@ class App {
     c.append(h("h4", {}, "Lichtszenario"));
     const sz = this.modell.szenarien ?? [];
     c.append(h("div", { class: "chips" }, ...sz.map((x: any) => h("button", { class: e.szenario === x.id ? "an" : "", onclick: () => this.einst((y) => { y.szenario = x.id; y.dimmer = {}; }, `Szenario ${x.name}`) }, x.name))));
+    if (this.nurLesen) return;
     const werte = { ...((sz.find((x: any) => x.id === e.szenario)?.leuchten) ?? {}), ...(e.dimmer ?? {}) };
     for (const l of this.szene.alleLeuchten()) {
       const v = Math.round((werte[l.id] ?? 0) * 100);
@@ -982,6 +1009,12 @@ class App {
   }
 
   private tabAnsichten(c: HTMLElement) {
+    if (this.nurLesen) {
+      c.append(h("p", { class: "dezent" }, "Gespeicherte Blickpunkte – antippen zum Hinspringen. Oben „3D“, „Plan 2D“ und „Begehen“ zum Umschauen und Durchlaufen."));
+      for (const a of this.modell.ansichten ?? [])
+        c.append(h("div", { class: "eintrag" }, h("span", { class: "name", onclick: () => this.ansichtZeigen(a) }, a.name, h("small", {}, a.begehen ? " · begehbar" : " · Übersicht"))));
+      return;
+    }
     c.append(h("div", { class: "zeile" },
       h("button", { class: "haupt", onclick: () => this.ansichtSpeichern(), disabled: this.modus === "2d" }, "Aktuelle Ansicht speichern")));
     for (const a of this.modell.ansichten ?? []) {
@@ -994,6 +1027,56 @@ class App {
       h("button", { onclick: () => this.alleAnsichtenFotografieren() }, "Screenshot aller Ansichten"),
       h("button", { onclick: () => this.render.alleAnsichtenRendern() }, "Alle Ansichten rendern")));
     c.append(h("p", { class: "dezent" }, "Ansichten werden mit dem Modell gespeichert. Claude kann über den MCP weitere anlegen (ansicht_setzen)."));
+  }
+
+  /** Freigabe-Links: passwortgeschützte Nur-Lese-Ansicht für Externe */
+  private async tabTeilen(c: HTMLElement) {
+    c.append(h("p", { class: "dezent" }, "Link mit eigenem Kennwort: Haus ansehen, drehen, begehen, messen und Ansichten anspringen – ohne etwas ändern zu können. Preise und Planungsnotizen sind ausgeblendet."));
+    const name = h("input", { type: "text", placeholder: "Für wen? (z. B. Waldemar)" }) as HTMLInputElement;
+    const kw = h("input", { type: "text", placeholder: "Kennwort (mind. 8 Zeichen)", autocomplete: "off" }) as HTMLInputElement;
+    const ablauf = h("input", { type: "date", title: "Gültig bis (leer = unbegrenzt)" }) as HTMLInputElement;
+    const stand = h("select", { title: "Welcher Stand wird gezeigt?" }, h("option", { value: "" }, "aktueller Stand (live)")) as HTMLSelectElement;
+    const preise = h("input", { type: "checkbox" }) as HTMLInputElement;
+    const vorschlag = () => {
+      const w = ["Ahorn", "Birke", "Eiche", "Fichte", "Linde", "Kiefer", "Buche", "Ulme"];
+      const z = crypto.getRandomValues(new Uint32Array(3));
+      kw.value = `${w[z[0] % w.length]}-${w[z[1] % w.length]}-${1000 + (z[2] % 9000)}`;
+    };
+    vorschlag();
+    c.append(h("h4", {}, "Neuen Link anlegen"),
+      h("div", { class: "zeile" }, name),
+      h("div", { class: "zeile" }, kw, h("button", { class: "klein", title: "Neues Kennwort vorschlagen", onclick: vorschlag }, "↻")),
+      h("div", { class: "zeile" }, h("label", {}, "gültig bis"), ablauf),
+      h("div", { class: "zeile" }, h("label", {}, "Stand"), stand),
+      h("label", { class: "zeile check" }, preise, h("span", {}, "Preise und Produktlinks zeigen")),
+      h("div", { class: "zeile" }, h("button", { class: "haupt", onclick: async () => {
+        try {
+          const f = await api.freigabeNeu({ name: name.value, kennwort: kw.value, ablauf: ablauf.value || null, variante: stand.value || null, preise: preise.checked });
+          await navigator.clipboard?.writeText(`${location.origin}/teilen/${f.id}/\nKennwort: ${kw.value}`).catch(() => {});
+          toast(`Link für ${f.name} angelegt – Link und Kennwort sind kopiert`, "info");
+          this.seiteNeu();
+        } catch (e) { toast((e as Error).message, "fehler"); }
+      } }, "Link anlegen")));
+    const liste = h("div", {});
+    c.append(h("h4", {}, "Bestehende Links"), liste);
+    const [fr, varianten] = await Promise.all([api.freigaben(), api.varianten().catch(() => [])]);
+    for (const v of varianten) stand.append(h("option", { value: v.slug }, `Variante: ${v.name}`));
+    if (!fr.length) liste.append(h("p", { class: "dezent" }, "Noch keine Links."));
+    for (const f of fr) {
+      const url = `${location.origin}/teilen/${f.id}/`;
+      const abgelaufen = f.ablauf && f.ablauf < new Date().toISOString().slice(0, 10);
+      liste.append(h("div", { class: "eintrag freigabe" + (f.aktiv && !abgelaufen ? "" : " aus") },
+        h("span", { class: "name" }, f.name,
+          h("small", {}, ` · ${f.variante ? `Variante ${f.variante}` : "live"}${f.ablauf ? ` · bis ${f.ablauf}` : ""}${f.preise ? " · mit Preisen" : ""} · ${f.aufrufe ?? 0}× geöffnet${f.zuletzt ? `, zuletzt ${zeitText(f.zuletzt)}` : ""}${abgelaufen ? " · abgelaufen" : ""}`)),
+        h("button", { class: "klein", title: url, onclick: () => navigator.clipboard?.writeText(url).then(() => toast("Link kopiert", "info")) }, "Link kopieren"),
+        h("button", { class: "klein", onclick: async () => { await api.freigabeAendern(f.id, { aktiv: !f.aktiv }); this.seiteNeu(); } }, f.aktiv ? "Sperren" : "Freigeben"),
+        h("button", { class: "klein", title: "Neues Kennwort setzen (offene Sitzungen enden)", onclick: async () => {
+          const neu = await frage(`Neues Kennwort für ${f.name} (mind. 8 Zeichen)`, "");
+          if (!neu) return;
+          try { await api.freigabeAendern(f.id, { kennwort: neu }); toast("Kennwort geändert", "info"); } catch (e) { toast((e as Error).message, "fehler"); }
+        } }, "Kennwort"),
+        h("button", { class: "x", title: "Link löschen", onclick: async () => { if (confirm(`Link für „${f.name}“ löschen?`)) { await api.freigabeLoeschen(f.id); this.seiteNeu(); } } }, "×")));
+    }
   }
 
   ansichtZeigen(a: any) {

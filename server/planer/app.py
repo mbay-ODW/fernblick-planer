@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Route
 
-from planer import auth, speicher
+from planer import auth, freigabe, speicher
 from planer.mcp_server import McpEndpunkt, session_manager_starten, werkzeuge
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -262,13 +262,113 @@ def oauth_authorize_post(request: Request, client_id: str = Form(...), redirect_
 
 app.router.routes.append(Route("/mcp", endpoint=McpEndpunkt(), methods=["GET", "POST", "DELETE"]))
 
+# --- Freigabe-Links (Nur-Lese-Ansicht für Externe) ---------------------------------
+@app.get("/api/freigaben")
+def freigaben(wer: str = Depends(auth.angemeldet)) -> list[dict[str, Any]]:
+    return freigabe.liste()
+
+
+@app.post("/api/freigaben")
+def freigabe_neu(daten: dict[str, Any] = Body(...), wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
+    return freigabe.anlegen(str(daten.get("name", "")), str(daten.get("kennwort", "")), wer, daten.get("ablauf"),
+                            daten.get("variante"), bool(daten.get("preise")))
+
+
+@app.patch("/api/freigaben/{fid}")
+def freigabe_aendern(fid: str, daten: dict[str, Any] = Body(...), wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
+    return freigabe.aendern(fid, daten)
+
+
+@app.delete("/api/freigaben/{fid}")
+def freigabe_loeschen(fid: str, wer: str = Depends(auth.angemeldet)) -> dict[str, Any]:
+    freigabe.loeschen(fid)
+    return {"ok": True}
+
+
+def _client_ip(request: Request) -> str:
+    ip = request.client.host if request.client else "?"
+    vertraut = auth._vertraute_ips()
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd and (vertraut is None or ip in vertraut):
+        return fwd.split(",")[0].strip()
+    return ip
+
+
+def _teilen_cookie(fid: str) -> str:
+    return f"fb_teilen_{fid}"
+
+
+def _anmeldeseite(fid: str, fehler: str = "", status: int = 200) -> HTMLResponse:
+    f = freigabe.gueltig(fid)
+    if not f:
+        return HTMLResponse("<!doctype html><meta charset=utf-8><title>Fernblick</title><p style='font-family:sans-serif'>"
+                            "Dieser Link ist nicht (mehr) gültig.</p>", status_code=404)
+    hinweis = f"<p class=f>{html.escape(fehler)}</p>" if fehler else ""
+    return HTMLResponse(f"""<!doctype html><html lang=de><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1"><meta name=robots content=noindex>
+<title>Ferienhaus Fernblick</title><style>
+body{{font-family:system-ui,sans-serif;background:#f4f1ea;color:#2f3a2c;display:grid;place-items:center;min-height:100vh;margin:0}}
+form{{background:#fff;padding:28px 26px;border-radius:14px;box-shadow:0 6px 30px #0001;width:min(340px,90vw)}}
+h1{{font-size:20px;margin:0 0 4px}}p{{margin:0 0 18px;color:#6b6a60;font-size:14px}}
+input{{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cfcabd;border-radius:8px;font-size:16px}}
+button{{margin-top:14px;width:100%;padding:11px;border:0;border-radius:8px;background:#3f5a36;color:#fff;font-size:16px}}
+.f{{color:#b03a2e;margin:10px 0 0}}</style></head><body>
+<form method=post action="/teilen/{fid}/anmelden"><h1>Ferienhaus Fernblick</h1>
+<p>3D-Ansicht für {html.escape(f["name"])} – bitte Kennwort eingeben.</p>
+<input type=password name=kennwort autocomplete=current-password autofocus required>{hinweis}
+<button>Ansehen</button></form></body></html>""", status_code=status, headers={"Cache-Control": "no-store"})
+
+
+def _teilen_sitzung(fid: str, request: Request) -> dict[str, Any]:
+    f = freigabe.sitzung_ok(fid, request.cookies.get(_teilen_cookie(fid)))
+    if not f:
+        raise HTTPException(401, "Bitte Kennwort eingeben")
+    return f
+
+
+@app.post("/teilen/{fid}/anmelden", include_in_schema=False)
+def teilen_anmelden(fid: str, request: Request, kennwort: str = Form("")) -> Response:
+    ip = _client_ip(request)
+    if freigabe.gesperrt(fid, ip):
+        return _anmeldeseite(fid, "Zu viele Fehlversuche – bitte in 15 Minuten erneut versuchen.", 429)
+    wert = freigabe.anmelden(fid, kennwort, ip)
+    if not wert:
+        return _anmeldeseite(fid, "Kennwort falsch.", 401)
+    r = RedirectResponse(f"/teilen/{fid}/", 303)
+    r.set_cookie(_teilen_cookie(fid), wert, max_age=freigabe.SITZUNG_SEK, path=f"/teilen/{fid}", httponly=True,
+                 secure=auth.basis_url().startswith("https"), samesite="lax")
+    return r
+
+
+@app.get("/teilen/{fid}/api/modell", include_in_schema=False)
+def teilen_modell(fid: str, request: Request) -> dict[str, Any]:
+    return freigabe.modell_fuer(_teilen_sitzung(fid, request))
+
+
+@app.get("/teilen/{fid}/api/modell/version", include_in_schema=False)
+def teilen_version(fid: str, request: Request) -> dict[str, Any]:
+    f = _teilen_sitzung(fid, request)
+    return {"version": freigabe.modell_fuer(f)["meta"]["version"]}
+
+
+@app.get("/teilen/{fid}", include_in_schema=False)
+@app.get("/teilen/{fid}/", include_in_schema=False)
+def teilen_seite(fid: str, request: Request) -> Response:
+    if not freigabe.sitzung_ok(fid, request.cookies.get(_teilen_cookie(fid))):
+        return _anmeldeseite(fid)
+    if not request.url.path.endswith("/"):
+        return RedirectResponse(f"/teilen/{fid}/", 307)
+    return FileResponse(WEB / "index.html", headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
+
+
+
 # --- Oberfläche -------------------------------------------------------------------
 if (WEB / "index.html").exists():
     app.mount("/assets", StaticFiles(directory=WEB / "assets"), name="assets")
 
     @app.get("/{pfad:path}", include_in_schema=False)
     def oberflaeche(pfad: str, request: Request) -> Response:
-        if pfad.startswith(("api/", "mcp", "oauth/")):
+        if pfad.startswith(("api/", "mcp", "oauth/", "teilen/")):
             raise HTTPException(404)
         if not auth.benutzer_aus_proxy(request):
             return HTMLResponse(f"<p>Bitte über {auth.basis_url()} anmelden.</p>", status_code=401)

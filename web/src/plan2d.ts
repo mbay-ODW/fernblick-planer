@@ -60,6 +60,8 @@ export class Plan {
   pinsel = false;
   /** Ebene Holzbau: EG = Deckenbalken, OG = Sparren und Pfette (mit Achsmaßen ab Nordwand) */
   balkenZeigen = false;
+  /** Nur-Lese-Ansicht (Freigabe-Link): kein Auswählen, Ziehen oder Malen */
+  gesperrt = false;
   private holzRechtecke: P2[][] = [];
   /** Messen: Strecken [A, B] (bleiben bis Esc), laufender Startpunkt und Zeiger */
   messen = false;
@@ -544,7 +546,7 @@ export class Plan {
       }
       const ziel = e.target as Element;
       const p = this.nachModell(e);
-      const dreh = ziel.getAttribute?.("data-drehen");
+      const dreh = this.gesperrt ? null : ziel.getAttribute?.("data-drehen");
       if (dreh) {
         const x = this.modell.moebel.find((y: any) => y.id === dreh);
         this.ziehen = { art: "drehen", id: dreh, x };
@@ -552,6 +554,10 @@ export class Plan {
       }
       if (this.messen) {
         this.ziehen = { art: "pan", start: [e.clientX, e.clientY], ansicht: { ...this.ansicht }, bewegt: false, messen: true };
+        return;
+      }
+      if (this.gesperrt) {
+        this.ziehen = { art: "pan", start: [e.clientX, e.clientY], ansicht: { ...this.ansicht }, bewegt: false };
         return;
       }
       const stueck = ziel.closest?.(".stueck") as Element | null;

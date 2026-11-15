@@ -22,10 +22,14 @@ async function antwort(r: Response): Promise<any> {
   return r.json();
 }
 
+/** Freigabe-Link (/teilen/<id>/): Nur-Lese-Ansicht, Daten kommen über die Freigabe-Endpunkte */
+export const TEILEN: string | null = location.pathname.match(/^\/teilen\/([A-Za-z0-9_-]+)/)?.[1] ?? null;
+const T = TEILEN ? `/teilen/${TEILEN}` : "";
+
 export const api = {
-  ich: () => fetch("/api/ich").then(antwort),
-  modell: () => fetch("/api/modell").then(antwort),
-  version: () => fetch("/api/modell/version").then(antwort),
+  ich: () => (TEILEN ? Promise.resolve({ benutzer: "" }) : fetch("/api/ich").then(antwort)),
+  modell: () => fetch(`${T}/api/modell`).then(antwort),
+  version: () => fetch(`${T}/api/modell/version`).then(antwort),
   speichern: (modell: any, basis_version: number | null, notiz = "") =>
     fetch("/api/modell", {
       method: "PUT",
@@ -70,4 +74,10 @@ export const api = {
   },
   renderListe: () => fetch("/api/render").then(antwort),
   renderAbbrechen: (id: string) => fetch(`/api/render/${id}`, { method: "DELETE" }).then(antwort),
+  freigaben: () => fetch("/api/freigaben").then(antwort),
+  freigabeNeu: (d: any) =>
+    fetch("/api/freigaben", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) }).then(antwort),
+  freigabeAendern: (id: string, d: any) =>
+    fetch(`/api/freigaben/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) }).then(antwort),
+  freigabeLoeschen: (id: string) => fetch(`/api/freigaben/${id}`, { method: "DELETE" }).then(antwort),
 };
