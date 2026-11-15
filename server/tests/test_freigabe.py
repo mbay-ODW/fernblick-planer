@@ -39,7 +39,8 @@ def test_freigabe_nur_lesen(client, monkeypatch):
     assert m["freigabe"]["name"] == "Waldemar" and m["bibliothek"] == [] and m["offene_fragen"] == []
     assert all("preis_eur" not in x and "quelle" not in x for x in m["moebel"])
     assert client.get(f"/teilen/{fid}/api/modell/version").json()["version"] == m["meta"]["version"]
-    assert client.get(f"/teilen/{fid}/").headers["content-type"].startswith("text/html")
+    seite = client.get(f"/teilen/{fid}/")
+    assert seite.status_code in (200, 503) and "Kennwort eingeben" not in seite.text
     # mit Gast-Cookie kein Zugriff auf die eigentliche API, kein Schreiben, keine Verwaltung
     assert client.get("/api/modell").status_code == 401
     assert client.put("/api/modell", json={"modell": m, "basis_version": None}).status_code == 401

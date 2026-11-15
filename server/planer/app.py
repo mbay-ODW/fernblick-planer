@@ -358,6 +358,8 @@ def teilen_seite(fid: str, request: Request) -> Response:
         return _anmeldeseite(fid)
     if not request.url.path.endswith("/"):
         return RedirectResponse(f"/teilen/{fid}/", 307)
+    if not (WEB / "index.html").exists():
+        return HTMLResponse("<p>Oberfläche nicht gebaut.</p>", status_code=503)
     return FileResponse(WEB / "index.html", headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
 
 
