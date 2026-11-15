@@ -97,7 +97,8 @@ def test_spielwelt_uebergabe_und_token(client, monkeypatch):
 def _mini_jpeg(w: int, h: int) -> bytes:
     """Nur Kopf (SOI, APP0, SOF0) – reicht für Ablage und Seitenverhältnis."""
     app0 = b"\xff\xe0" + (16).to_bytes(2, "big") + b"JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
-    sof = b"\xff\xc0" + (17).to_bytes(2, "big") + b"\x08" + h.to_bytes(2, "big") + w.to_bytes(2, "big") + b"\x03" + b"\x01\x11\x00\x02\x11\x01\x03\x11\x01"
+    komponenten = b"\x03\x01\x11\x00\x02\x11\x01\x03\x11\x01"
+    sof = b"\xff\xc0" + (17).to_bytes(2, "big") + b"\x08" + h.to_bytes(2, "big") + w.to_bytes(2, "big") + komponenten
     return b"\xff\xd8" + app0 + sof + b"\xff\xd9"
 
 
