@@ -9,7 +9,7 @@ import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2, lamellenMasse } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
-import { tvZoll, recamiereLinks } from "./moebel";
+import { tvZoll, recamiereBeide, recamiereLinks } from "./moebel";
 
 const TOUCH = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 const BEGEHEN_TOUCH = "Knüppel links = laufen (weit ziehen = schneller) · rechts wischen = umschauen · Boden antippen = hingehen";
@@ -384,7 +384,7 @@ class App {
       farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
-    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
     if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
@@ -419,9 +419,9 @@ class App {
     if (!x) return;
     this.aendern((m) => {
       const y = m.moebel.find((z: any) => z.id === x.id);
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) delete y[k];
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) delete y[k];
       Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
     }, "moebel", `${x.name} → ${v.name}`);
     this.tauschModus = false;
   }
@@ -1247,7 +1247,7 @@ class App {
           h("input", { value: x.farbe ?? "", placeholder: "Farbname", onchange: (e: Event) => setze("farbe", (e.target as HTMLInputElement).value) })),
         h("label", {}, "Material"), h("input", { value: x.material ?? "", onchange: (e: Event) => setze("material", (e.target as HTMLInputElement).value) }),
         ...(x.typ === "ecksofa" || x.typ === "ecksofa_kissen" ? [h("label", {}, "Recamiere (von vorn)"), h("div", { class: "chips" },
-          ...(["links", "rechts"] as const).map((seite) => h("button", { class: (recamiereLinks(x) ? "links" : "rechts") === seite ? "an" : "",
+          ...((x.typ === "ecksofa" ? ["links", "rechts", "beide"] : ["links", "rechts"]) as string[]).map((seite) => h("button", { class: (recamiereBeide(x) ? "beide" : recamiereLinks(x) ? "links" : "rechts") === seite ? "an" : "",
             onclick: () => setze("recamiere", seite, `${x.name}: Recamiere ${seite}`) }, seite)))] : []),
         ...(x.typ === "haengeschrank" ? [
           h("label", {}, "Front"), h("div", { class: "chips" }, ...(["glatt", "riffel"] as const).map((v) => h("button", { class: (x.front ?? "glatt") === v ? "an" : "",

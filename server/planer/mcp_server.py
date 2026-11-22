@@ -110,6 +110,7 @@ def _upsert(liste: list[dict[str, Any]], eintraege: list[dict[str, Any]], key: s
 # ---------------------------------------------------------------------------
 # Felder, die beim Einfügen/Tauschen aus einer Bibliotheksvorlage übernommen werden
 VORLAGE_FELDER = ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", "z", "licht", "preis_eur", "recamiere",
+                  "recamiere_links_breite", "recamiere_rechts_breite",
                   "front", "griff", "tueren", "offen_unten", "teilung",
                   "nische_breite", "nische", "platte_farbe",
                   "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand",
@@ -168,7 +169,7 @@ def bibliothek_liste(kategorie: str = "", suche: str = "") -> dict[str, Any]:
 def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, Any]:
     """Legt Möbel an oder ändert sie (nach id; ohne id = neu). Bei Änderungen werden nur die genannten Felder
     überschrieben. Felder: id, raum, geschoss, typ, name, masse_bth [B, T, H], pos [x, y], rot_grad, z, farbe,
-    material, quelle, hinweis, preis_eur, link, verschiebbar; ecksofa: recamiere = links/rechts (von vorn gesehen).
+    material, quelle, hinweis, preis_eur, link, verschiebbar; ecksofa: recamiere = links/rechts/beide (von vorn gesehen).
     Ein neues Möbel kann mit vorlage_id aus der
     Bibliothek angelegt werden (Maße/Farbe/Typ werden übernommen, eigene Felder gehen vor).
     Gültige Typen mit eigener 3D-Form: sofa, ecksofa, sessel, sitzsack, stuhl, esssofa, bank, esstisch,
@@ -184,7 +185,9 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     kommode (schubladen_x, schubladen_y; z. B. MALM),
     schreibtisch_container (container links/rechts, container_breite, schubladen, kante_farbe; z. B. LAGKAPTEN/ALEX),
     ecksofa_kissen (recamiere, beine, rueckenkissen, zierkissen; z. B. CARRYHOME),
-    ecksofa (recamiere, beine, arm_breite, sitztiefe, arme "beide"); Recamiere standardmäßig rechts. andere Typen
+    ecksofa (recamiere, beine, arm_breite, sitztiefe, arme "beide"); Recamiere standardmäßig rechts;
+    recamiere "beide" = U-Form/Wohnlandschaft mit recamiere_links_breite, recamiere_rechts_breite
+    (Armlehnen außen, arme "ohne" lässt sie weg). andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}

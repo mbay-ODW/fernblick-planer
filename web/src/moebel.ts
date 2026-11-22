@@ -88,11 +88,38 @@ export function moebelBauen(m: any): MoebelObjekt {
     case "ecksofa": {
       // L-Form: Lehne entlang der Rückseite, Recamiere über die ganze Tiefe –
       // von vorn gesehen rechts (+X, Standard) oder links (recamiere: "links" spiegelt in X)
-      const sx = recamiereLinks(m) ? -1 : 1;
-      // optional: beine (Füße, Polster darüber), arm_breite, sitztiefe (Tiefe des Sitzteils ohne Recamiere)
       const fussE = Number(m.beine) || 0, startE = g.children.length;
       const sitzT = Math.min(d - 0.2, Number(m.sitztiefe) || Math.min(0.95, d * 0.6)), sitz = 0.44 - fussE * 0.6;
       const lehne = Math.max(0.75, h * 0.85) - fussE, arm = Number(m.arm_breite) || 0.16;
+      if (recamiereBeide(m)) {
+        // U-Form (Wohnlandschaft): Recamiere links und rechts, Armlehnen außen über die Sitztiefe
+        const rbL = Number(m.recamiere_links_breite) || Math.min(1.0, w * 0.3);
+        const rbR = Number(m.recamiere_rechts_breite) || rbL;
+        polster(b, w, sitz, sitzT, stoff, 0, sitz / 2, -d / 2 + sitzT / 2);
+        polster(b, w, lehne, 0.2, stoff, 0, lehne / 2, -d / 2 + 0.1);
+        for (const [s, rb] of [[-1, rbL], [1, rbR]] as [number, number][]) {
+          polster(b, rb, sitz, d - sitzT, stoff, s * (w / 2 - rb / 2), sitz / 2, -d / 2 + sitzT + (d - sitzT) / 2);
+          if (m.arme !== "ohne") polster(b, arm, 0.62 - fussE * 0.6, sitzT, stoff, s * (w / 2 - arm / 2), (0.62 - fussE * 0.6) / 2, -d / 2 + sitzT / 2);
+          polster(b, rb - arm - 0.04, 0.1, d - 0.3, kissen, s * (w / 2 - arm - (rb - arm) / 2), sitz + 0.05, 0.1);
+          polster(b, rb - arm - 0.06, 0.42, 0.14, kissen, s * (w / 2 - arm - (rb - arm) / 2), sitz + 0.23, -d / 2 + 0.27);
+        }
+        const mitte = w - rbL - rbR, n = Math.max(1, Math.round(mitte / 0.7)), kb = mitte / n;
+        for (let i = 0; i < n; i++) {
+          const x = -w / 2 + rbL + kb * (i + 0.5);
+          polster(b, kb - 0.03, 0.1, sitzT - 0.25, kissen, x, sitz + 0.05, -d / 2 + 0.2 + (sitzT - 0.2) / 2);
+          polster(b, kb - 0.05, 0.42, 0.14, kissen, x, sitz + 0.23, -d / 2 + 0.27);
+        }
+        if (fussE) {
+          for (let i = startE; i < g.children.length; i++) g.children[i].position.y += fussE;
+          const beinM = mat(m.beine_farbe ?? "#3a3a3a", "metall", { name: "Sofafuß" });
+          const pts: [number, number][] = [[-w / 2 + 0.06, -d / 2 + 0.06], [w / 2 - 0.06, -d / 2 + 0.06], [-w / 2 + 0.06, d / 2 - 0.06],
+            [w / 2 - 0.06, d / 2 - 0.06], [-w / 2 + rbL - 0.06, d / 2 - 0.06], [w / 2 - rbR + 0.06, d / 2 - 0.06]];
+          for (const [x, z] of pts) rund(g, 0.02, fussE, beinM, x, fussE / 2, z, 12);
+        }
+        break;
+      }
+      const sx = recamiereLinks(m) ? -1 : 1;
+      // optional: beine (Füße, Polster darüber), arm_breite, sitztiefe (Tiefe des Sitzteils ohne Recamiere)
       const rb = Math.min(1.0, w * 0.38);
       polster(b, w, sitz, sitzT, stoff, 0, sitz / 2, -d / 2 + sitzT / 2);
       polster(b, rb, sitz, d - sitzT, stoff, sx * (w / 2 - rb / 2), sitz / 2, -d / 2 + sitzT + (d - sitzT) / 2);
@@ -730,7 +757,19 @@ export function recamiereLinks(m: any): boolean {
   return /recamiere\s+links|links\s*recamiere/i.test(String(m.name ?? ""));
 }
 
-/** Grundflächen für die Kollisionsprüfung (Ecksofa als L aus zwei Rechtecken). */
+/** Ecksofa als U-Form (recamiere: "beide")? Nur beim Typ ecksofa. */
+export function recamiereBeide(m: any): boolean {
+  return m.typ === "ecksofa" && String(m.recamiere ?? "").toLowerCase() === "beide";
+}
+
+/** Breiten der Recamieren einer U-Form [links, rechts] (von vorn gesehen). */
+export function recamiereBreiten(m: any): [number, number] {
+  const w = m.masse_bth?.[0] ?? 3;
+  const l = Number(m.recamiere_links_breite) || Math.min(1.0, w * 0.3);
+  return [l, Number(m.recamiere_rechts_breite) || l];
+}
+
+/** Grundflächen für die Kollisionsprüfung (Ecksofa als L aus zwei Rechtecken, U aus drei). */
 export function fussflaechen(m: any): [number, number][][] {
   if (m.typ !== "ecksofa" && m.typ !== "ecksofa_kissen") return [ecken(m)];
   const [w, d] = m.masse_bth ?? [2.5, 1.6];
@@ -738,6 +777,11 @@ export function fussflaechen(m: any): [number, number][][] {
   const a = ((m.rot_grad ?? 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
   const rechteck = (x0: number, y0: number, x1: number, y1: number): [number, number][] =>
     [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => [m.pos[0] + x * c - y * s, m.pos[1] + x * s + y * c]);
+  if (recamiereBeide(m)) {
+    const [rl, rr] = recamiereBreiten(m);
+    return [rechteck(-w / 2, -d / 2, w / 2, -d / 2 + sitzT), rechteck(-w / 2, -d / 2 + sitzT, -w / 2 + rl, d / 2),
+      rechteck(w / 2 - rr, -d / 2 + sitzT, w / 2, d / 2)];
+  }
   const rec = recamiereLinks(m) ? rechteck(-w / 2, -d / 2 + sitzT, -w / 2 + rb, d / 2) : rechteck(w / 2 - rb, -d / 2 + sitzT, w / 2, d / 2);
   return [rechteck(-w / 2, -d / 2, w / 2, -d / 2 + sitzT), rec];
 }
