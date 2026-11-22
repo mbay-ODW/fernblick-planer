@@ -114,7 +114,7 @@ VORLAGE_FELDER = ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", 
                   "front", "griff", "tueren", "offen_unten", "teilung",
                   "nische_breite", "nische", "platte_farbe",
                   "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand",
-                  "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe",
+                  "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil",
                   "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y")
 
 @mcp.tool(annotations=LESEN)
@@ -180,14 +180,15 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     tueren 1/2, offen_unten = Höhe offener Fächer in m), waschmaschinenschrank (tueren),
     mehrzweckschrank (teilung = Höhe der Griffmulde in m),
     waschmaschinen_unterbau (nische_breite, nische links/rechts, platte_farbe),
-    bett (beine, rahmen_hoehe, schubladen je Seite, knoepfe), tagesbett (schubladen, kasten_hoehe),
+    bett (beine, rahmen_hoehe, schubladen je Seite, knoepfe, fussteil = Höhe Fußteil in m), tagesbett (schubladen, kasten_hoehe),
     faecherregal (faecher_x, faecher_y, rueckwand; z. B. KALLAX),
     kommode (schubladen_x, schubladen_y; z. B. MALM),
     schreibtisch_container (container links/rechts, container_breite, schubladen, kante_farbe; z. B. LAGKAPTEN/ALEX),
     ecksofa_kissen (recamiere, beine, rueckenkissen, zierkissen; z. B. CARRYHOME),
-    ecksofa (recamiere, beine, arm_breite, sitztiefe, arme "beide"); Recamiere standardmäßig rechts;
+    ecksofa (recamiere, beine, beine_farbe, beine_material "holz", arm_breite, sitztiefe,
+    arme "beide"); Recamiere standardmäßig rechts;
     recamiere "beide" = U-Form/Wohnlandschaft mit recamiere_links_breite, recamiere_rechts_breite
-    (Armlehnen außen, arme "ohne" lässt sie weg). andere Typen
+    (Armlehnen außen, arme "ohne" lässt sie weg); esssofa/bank (beine_farbe = Holzfüße, esssofa arme "ohne"). andere Typen
     werden als Quader gezeigt."""
     def f(m: dict[str, Any]) -> None:
         bib = {v["vorlage_id"]: v for v in m["bibliothek"]}
@@ -292,7 +293,8 @@ def leuchten_setzen(leuchten: list[dict[str, Any]], notiz: str = "") -> dict[str
     """Leuchten anlegen/ändern (nach id). Felder: id, name, typ (deckenspot, pendel, pendel_cluster, wandleuchte,
     stehleuchte, tischleuchte, led_streifen, strahler, stromschiene), raum, geschoss, pos [x, y], z (Höhe der Lichtquelle
     über Geschossboden), lumen (gesamt), kelvin (2200–4000), farbmodus ("weiss"/"farbe") + farbe_licht (#rrggbb, z. B. Hue),
-    laenge (nur led_streifen, m), richtung (wandleuchte: N/O/S/W =
+    laenge (nur led_streifen, m), pendel/pendel_cluster: durchmesser (Schirm, m), farbe_schirm, kreis_radius,
+unterkante_ueber_tisch, richtung (wandleuchte: N/O/S/W =
     Wand, an der sie hängt), quelle (z. B. „Lichtplanung 25.05.2026“).
     Linienleuchten (stromschiene, led_streifen) statt pos über einen Verlauf: an="pfette" mit bereich [y von, y bis];
     oder wand=<Wand-ID> + seite (Nord/Ost/Süd/West) entlang der Wandoberkante (folgt der Dachschräge), abstand_oben,

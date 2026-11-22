@@ -202,28 +202,31 @@ export function leuchtenBauen(m: any, M: Masse, waende: WandInfo[] = [], treffer
       const tisch = (m.moebel ?? []).find((t: any) => /tisch/.test(t.typ) && Math.hypot(t.pos[0] - x, t.pos[1] - y) < 0.6);
       const unten = z0 + (le.z ?? (tisch ? (tisch.masse_bth?.[2] ?? 0.75) + (le.unterkante_ueber_tisch ?? 0.7) : 1.5));
       const decke = M.pfetteUK;
+      // optional: durchmesser (Schirm, m), farbe_schirm (#rrggbb), kreis_radius (Abstand der Schirme zur Mitte, m)
+      const rs = (Number(le.durchmesser) || 0.26) / 2;
+      const kreis = n > 1 ? (Number(le.kreis_radius) || Math.max(0.22, rs * 1.45)) : 0;
       for (let i = 0; i < n; i++) {
         const a = (i * Math.PI * 2) / n + 0.4;
-        const r = n > 1 ? 0.22 : 0;
-        const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+        const px = x + Math.cos(a) * kreis, py = y + Math.sin(a) * kreis;
         const pz = unten + (n > 1 ? i * 0.14 : 0);
-        const lm = leuchtMat("#d9cfbf", lf);
+        const lm = leuchtMat(le.farbe_schirm ?? "#d9cfbf", lf);
         mats.push(lm);
-        const schirm = new THREE.Mesh(new THREE.SphereGeometry(0.13, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), lm);
-        schirm.position.set(px, pz + 0.13, py);
+        const schirm = new THREE.Mesh(new THREE.SphereGeometry(rs, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), lm);
+        schirm.position.set(px, pz + rs, py);
         schirm.rotation.x = 0;
         schirm.material.side = THREE.DoubleSide;
         g.add(schirm);
-        const kabel = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, decke - pz - 0.26, 6), schwarz);
-        kabel.position.set(px, (decke + pz + 0.26) / 2, py);
+        const kabel = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, decke - pz - 2 * rs, 6), schwarz);
+        kabel.position.set(px, (decke + pz + 2 * rs) / 2, py);
         g.add(kabel);
         const pl = new THREE.PointLight(lf.clone(), 0, 9, 2);
-        pl.position.set(px, pz + 0.06, py);
+        pl.position.set(px, pz + rs * 0.45, py);
         pl.userData = { anteil: 1 / n };
         g.add(pl);
         lichter.push(pl);
       }
-      const bald = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.03, 32), schwarz);
+      const rb = Math.max(0.18, kreis + 0.06);
+      const bald = new THREE.Mesh(new THREE.CylinderGeometry(rb, rb, 0.03, 32), schwarz);
       bald.position.set(x, decke - 0.015, y);
       g.add(bald);
     } else if (typ === "wandleuchte" || typ === "strahler") {

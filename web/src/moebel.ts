@@ -111,7 +111,7 @@ export function moebelBauen(m: any): MoebelObjekt {
         }
         if (fussE) {
           for (let i = startE; i < g.children.length; i++) g.children[i].position.y += fussE;
-          const beinM = mat(m.beine_farbe ?? "#3a3a3a", "metall", { name: "Sofafuß" });
+          const beinM = mat(m.beine_farbe ?? "#3a3a3a", m.beine_material === "holz" ? "holz" : "metall", { name: "Sofafuß" });
           const pts: [number, number][] = [[-w / 2 + 0.06, -d / 2 + 0.06], [w / 2 - 0.06, -d / 2 + 0.06], [-w / 2 + 0.06, d / 2 - 0.06],
             [w / 2 - 0.06, d / 2 - 0.06], [-w / 2 + rbL - 0.06, d / 2 - 0.06], [w / 2 - rbR + 0.06, d / 2 - 0.06]];
           for (const [x, z] of pts) rund(g, 0.02, fussE, beinM, x, fussE / 2, z, 12);
@@ -138,7 +138,7 @@ export function moebelBauen(m: any): MoebelObjekt {
       polster(b, rb - 0.06, 0.42, 0.14, kissen, sx * (w / 2 - rb / 2), sitz + 0.23, -d / 2 + 0.27);
       if (fussE) {
         for (let i = startE; i < g.children.length; i++) g.children[i].position.y += fussE;
-        const beinM = mat(m.beine_farbe ?? "#b8b4ac", "metall", { name: "Sofafuß" });
+        const beinM = mat(m.beine_farbe ?? "#b8b4ac", m.beine_material === "holz" ? "holz" : "metall", { name: "Sofafuß" });
         const pts: [number, number][] = [[sx * (-w / 2 + 0.06), -d / 2 + 0.06], [sx * (-w / 2 + 0.06), -d / 2 + sitzT - 0.06],
           [sx * (w / 2 - 0.06), -d / 2 + 0.06], [sx * (w / 2 - 0.06), d / 2 - 0.06], [sx * (w / 2 - rb + 0.06), d / 2 - 0.06]];
         for (const [x, z] of pts) rund(g, 0.02, fussE, beinM, x, fussE / 2, z, 12);
@@ -309,11 +309,13 @@ export function moebelBauen(m: any): MoebelObjekt {
     case "esssofa":
     case "bank": {
       const sitz = 0.46;
-      beine(sitz - 0.1, 0.06, 0.035);
+      // beine_farbe: Holzfüße in dieser Farbe (sonst schwarz); arme "ohne": Esssofa ohne Armlehnen
+      const beinM = m.beine_farbe ? mat(m.beine_farbe, "holz", { name: "Fuß Holz" }) : dunkel;
+      beine(sitz - 0.1, 0.06, m.beine_farbe ? 0.045 : 0.035, beinM);
       polster(b, w, 0.12, d, stoff, 0, sitz - 0.06, 0);
       if (typ === "esssofa") {
         polster(b, w, h - sitz + 0.02, 0.14, stoff, 0, sitz + (h - sitz) / 2, -d / 2 + 0.07);
-        for (const s of [-1, 1]) polster(b, 0.08, 0.2, d, stoff, s * (w / 2 - 0.04), sitz + 0.1, 0);
+        if (m.arme !== "ohne") for (const s of [-1, 1]) polster(b, 0.08, 0.2, d, stoff, s * (w / 2 - 0.04), sitz + 0.1, 0);
       }
       break;
     }
@@ -463,6 +465,16 @@ export function moebelBauen(m: any): MoebelObjekt {
               kn.position.set(x, yy, -d / 2 + kt + 0.002);
               g.add(kn);
             }
+          }
+        }
+        // optional: fussteil (Höhe Fußteil über Boden, m), gepolstert wie das Kopfteil, bei knoepfe mit einer Knopfreihe
+        const fussH = Number(m.fussteil) || 0;
+        if (fussH > 0) {
+          b(w, fussH, kt, holzM, 0, fussH / 2, d / 2 - kt / 2);
+          if (m.knoepfe) for (let k = 0; k < 3; k++) {
+            const kn = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), knopfM);
+            kn.position.set(-w / 2 + (w * (k + 1)) / 4, fussH - 0.14, d / 2 + 0.002);
+            g.add(kn);
           }
         }
         b(w - 0.04, 0.06, d * 0.62, decke, 0, mOben - 0.02, d * 0.17);
