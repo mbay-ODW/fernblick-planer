@@ -151,6 +151,18 @@ def ecksofas() -> list[dict[str, Any]]:
 def haushalt() -> list[dict[str, Any]]:
     """Haushaltsgeräte und Badmöbel (Standardmaße)."""
     return [
+        _v("lamellen-6", "lamellen", "Lamellen 6 Stk. (wie Lamellenwand)", 0.76, 0.12, 2.68, "eiche", "Sonstiges",
+           "Holz", anzahl=6, lamelle_breite=0.06, abstand=0.08),
+        _v("lamellen-6-tragend", "lamellen", "Lamellen 6 Stk., Nr. 1 + 4 tragend", 0.76, 0.12, 2.68, "eiche",
+           "Sonstiges", "Holz", anzahl=6, lamelle_breite=0.06, abstand=0.08, tragend=[1, 4]),
+        _v("lamellen-2-statik", "lamellen", "2 tragende Lamellen 6/12 (Statik E11AL)", 0.42, 0.12, 2.68, "eiche",
+           "Sonstiges", "Holz", anzahl=2, lamelle_breite=0.06, abstand=0.30, tragend=[1, 2]),
+        _v("stuetze-stahl-60", "stuetze", "Stütze Stahl Vierkant 60×60", 0.06, 0.06, 2.68, "schwarz", "Sonstiges",
+           "Stahl pulverbeschichtet"),
+        _v("stuetze-stahl-80", "stuetze", "Stütze Stahl Vierkant 80×80", 0.08, 0.08, 2.68, "schwarz", "Sonstiges",
+           "Stahl pulverbeschichtet"),
+        _v("stuetze-holz-12-8", "stuetze", "Holzstütze 12/8 (Statik E11)", 0.12, 0.08, 2.68, "eiche", "Sonstiges",
+           "Holz"),
         _v("waschmaschine", "waschmaschine", "Waschmaschine (Frontlader)", 0.60, 0.60, 0.85, "weiß", "Sonstiges", "Lack"),
         _v("trockner", "trockner", "Wäschetrockner", 0.60, 0.65, 0.85, "weiß", "Sonstiges", "Lack"),
         _v("apothekerschrank-bad", "apothekerschrank", "Bad-Apothekerschrank (Vollauszug)", 0.30, 0.45, 1.80, "weiß",

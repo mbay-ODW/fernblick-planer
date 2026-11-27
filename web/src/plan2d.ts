@@ -2,7 +2,7 @@
 import { masse, wandInfos, WandInfo, P2, treppenWeg, Masse, flaecheLage, leuchtePfad, lamellenMasse, balkenRechtecke, sparrenLage } from "./haus";
 import type { Bauteil } from "./szene";
 import { bauteilFinden, bauteilVerschieben, mitlaeuferKopie } from "./bauteile";
-import { ecken, istFlach, recamiereBeide, recamiereBreiten, recamiereLinks } from "./moebel";
+import { ecken, istFlach, lamellenGruppe, recamiereBeide, recamiereBreiten, recamiereLinks } from "./moebel";
 import { wandPoly } from "./pruefung";
 
 function inPoly(x: number, y: number, poly: P2[]) {
@@ -392,7 +392,15 @@ export class Plan {
     const [w, d] = x.masse_bth;
     const t = el("g", { transform: `translate(${x.pos[0]} ${x.pos[1]}) rotate(${x.rot_grad ?? 0})`, class: "stueck" + (x.id === this.auswahl ? " gewaehlt" : "") + (this.warnIds.has(x.id) ? " warnung" : "") + (istFlach(x) ? " flach" : "") + (x.z ? " haengend" : ""), "data-id": x.id }, g);
     el("rect", { x: -w / 2, y: -d / 2, width: w, height: d, rx: Math.min(0.04, w / 4), style: `fill:${x.farbe_hex}` }, t);
-    if (!istFlach(x)) el("line", { x1: -w / 2, y1: -d / 2, x2: w / 2, y2: -d / 2, class: "ruecken" }, t);
+    if (x.typ === "lamellen") {
+      // einzelne Lamellen; tragende kräftiger umrandet
+      const rect = t.firstChild as Element;
+      rect.setAttribute("style", "fill:transparent");
+      rect.setAttribute("class", "lamellen-rahmen");
+      const lg = lamellenGruppe(x);
+      lg.x.forEach((lx, i) => el("rect", { x: lx - lg.b / 2, y: -d / 2, width: lg.b, height: d, style: `fill:${x.farbe_hex}`,
+        class: lg.tragend.has(i + 1) ? "lamelle tragend" : "lamelle" }, t));
+    } else if (!istFlach(x)) el("line", { x1: -w / 2, y1: -d / 2, x2: w / 2, y2: -d / 2, class: "ruecken" }, t);
     if (x.typ === "ecksofa" || x.typ === "ecksofa_kissen") {
       const rb = Math.min(1.0, w * 0.38), sitzT = Math.min(d - 0.2, Number(x.sitztiefe) || Math.min(0.95, d * 0.6));
       if (recamiereBeide(x)) {

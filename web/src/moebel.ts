@@ -49,6 +49,23 @@ export interface MoebelObjekt {
   leuchtflaechen: THREE.MeshStandardMaterial[];
 }
 
+/** Lamellengruppe (typ lamellen): anzahl, lamelle_breite (entlang B), abstand (lichte Weite), tragend = [Nr. ab 1]. */
+export function lamellenGruppe(m: any) {
+  const w = Number(m.masse_bth?.[0]) || 0.76;
+  const b = Math.max(0.01, Number(m.lamelle_breite) || 0.06);
+  const a = Math.max(0, m.abstand !== undefined && m.abstand !== null && m.abstand !== "" ? Number(m.abstand) : 0.08);
+  const n = Math.max(1, Math.round(Number(m.anzahl) || Math.floor((w + a) / (b + a))));
+  const L = n * b + (n - 1) * a;
+  const tragend = new Set<number>((Array.isArray(m.tragend) ? m.tragend : []).map((x: any) => Number(x)));
+  return { n, b, a, L, x: Array.from({ length: n }, (_, i) => -L / 2 + b / 2 + i * (b + a)), tragend };
+}
+
+/** Breite B passend zu anzahl, lamelle_breite und abstand. */
+export function lamellenBreite(m: any): number {
+  const g = lamellenGruppe({ ...m, masse_bth: [0, 0, 0] });
+  return Math.round(g.L * 1000) / 1000;
+}
+
 export function moebelBauen(m: any): MoebelObjekt {
   const g = new THREE.Group();
   const [w, d, h] = (m.masse_bth ?? [0.5, 0.5, 0.5]).map((x: number) => Number(x) || 0.3);
@@ -587,6 +604,14 @@ export function moebelBauen(m: any): MoebelObjekt {
       }
       break;
     }
+    case "lamellen": {
+      // frei stehende Lamellengruppe vom Boden bis unter die Decke (wie die Lamellenwand)
+      const lg = lamellenGruppe(m);
+      const boden = Math.max(0, Math.min(0.1, Number(m.boden_abstand ?? 0.01)));
+      const lm = /stahl|metall/i.test(String(m.material ?? "")) ? mat(farbe, "metall") : mat(farbe, "holz", { name: `Lamellen ${m.farbe ?? ""}`.trim() });
+      for (const x of lg.x) b(lg.b, h - boden, d, lm, x, boden + (h - boden) / 2, 0);
+      break;
+    }
     case "garderobe_lamellen": {
       b(w, h, 0.02, haupt, 0, h / 2, -d / 2 + 0.01);
       const n = Math.floor(w / 0.08);
@@ -783,6 +808,12 @@ export function recamiereBreiten(m: any): [number, number] {
 
 /** Grundflächen für die Kollisionsprüfung (Ecksofa als L aus zwei Rechtecken, U aus drei). */
 export function fussflaechen(m: any): [number, number][][] {
+  if (m.typ === "lamellen") {
+    const lg = lamellenGruppe(m), d = Number(m.masse_bth?.[1]) || 0.12;
+    const a = ((m.rot_grad ?? 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+    return lg.x.map((x) => ([[x - lg.b / 2, -d / 2], [x + lg.b / 2, -d / 2], [x + lg.b / 2, d / 2], [x - lg.b / 2, d / 2]] as [number, number][])
+      .map(([u, v]) => [m.pos[0] + u * c - v * s, m.pos[1] + u * s + v * c] as [number, number]));
+  }
   if (m.typ !== "ecksofa" && m.typ !== "ecksofa_kissen") return [ecken(m)];
   const [w, d] = m.masse_bth ?? [2.5, 1.6];
   const sitzT = Math.min(d - 0.2, Number(m.sitztiefe) || Math.min(0.95, d * 0.6)), rb = Math.min(1.0, w * 0.38);

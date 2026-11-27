@@ -9,7 +9,7 @@ import { pruefen, Hinweis } from "./pruefung";
 import { seitenName, P2, lamellenMasse } from "./haus";
 import { sonnenstand, spotWinkel } from "./licht";
 import { RenderAnsicht } from "./rendern";
-import { tvZoll, recamiereBeide, recamiereLinks } from "./moebel";
+import { tvZoll, recamiereBeide, recamiereLinks, lamellenGruppe, lamellenBreite } from "./moebel";
 
 const TOUCH = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 const BEGEHEN_TOUCH = "Knüppel links = laufen (weit ziehen = schneller) · rechts wischen = umschauen · Boden antippen = hingehen";
@@ -384,7 +384,7 @@ class App {
       farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material, pos, rot_grad: 0, geschoss, raum: this.raumAn(this.modell, pos, geschoss) ?? "",
       verschiebbar: true, quelle: `Planer (${this.ich})`,
     };
-    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil", "kreis_radius", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
+    for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil", "kreis_radius", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y", "anzahl", "lamelle_breite", "abstand", "tragend", "boden_abstand"]) if (v[k] !== undefined) neu[k] = structuredClone(v[k]);
     if (WANDTYPEN.test(v.typ)) this.anWand(neu);
     this.aendern((m) => m.moebel.push(neu), "moebel", `${v.name} hinzugefügt`);
     this.waehlen(neu.id);
@@ -419,9 +419,9 @@ class App {
     if (!x) return;
     this.aendern((m) => {
       const y = m.moebel.find((z: any) => z.id === x.id);
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil", "kreis_radius", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) delete y[k];
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil", "kreis_radius", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y", "anzahl", "lamelle_breite", "abstand", "tragend", "boden_abstand"]) delete y[k];
       Object.assign(y, { vorlage_id: v.vorlage_id, typ: v.typ, name: v.name, masse_bth: [...v.masse_bth], farbe: v.farbe, farbe_hex: v.farbe_hex, material: v.material });
-      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil", "kreis_radius", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
+      for (const k of ["z", "licht", "preis_eur", "link", "recamiere", "recamiere_links_breite", "recamiere_rechts_breite", "tv_zoll", "front", "griff", "tueren", "offen_unten", "teilung", "nische_breite", "nische", "platte_farbe", "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand", "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil", "kreis_radius", "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y", "anzahl", "lamelle_breite", "abstand", "tragend", "boden_abstand"]) if (v[k] !== undefined) y[k] = structuredClone(v[k]);
     }, "moebel", `${x.name} → ${v.name}`);
     this.tauschModus = false;
   }
@@ -1257,6 +1257,21 @@ class App {
           h("label", {}, "Türen / offen unten (m)"), h("div", { class: "zwei" },
             num(x.tueren ?? 1, (v) => setze("tueren", Math.max(1, Math.min(2, Math.round(v))), `${x.name}: Türen`), 1),
             num(x.offen_unten ?? 0, (v) => setze("offen_unten", Math.max(0, v) || undefined, `${x.name}: offenes Fach`), 0.01))] : []),
+        ...(x.typ === "lamellen" ? (() => {
+          const lg = lamellenGruppe(x);
+          const lam = (neu: any, notiz: string) => this.aendern((m) => {
+            const y = m.moebel.find((z: any) => z.id === x.id);
+            Object.assign(y, neu);
+            y.masse_bth = [lamellenBreite(y), y.masse_bth[1], y.masse_bth[2]];
+          }, "moebel", `${x.name}: ${notiz}`);
+          return [
+            h("label", {}, "Anzahl / Lamelle (m)"), h("div", { class: "zwei" },
+              num(lg.n, (v) => lam({ anzahl: Math.max(1, Math.round(v)) }, `${Math.round(v)} Lamellen`), 1),
+              num(lg.b, (v) => lam({ lamelle_breite: Math.max(0.01, v) }, "Lamellenbreite"), 0.01)),
+            h("label", {}, "Abstand licht (m)"), num(lg.a, (v) => lam({ abstand: Math.max(0, v) }, "Abstand"), 0.01),
+            h("label", {}, "tragend (Nr.)"), h("input", { value: [...lg.tragend].join(", "), placeholder: "z. B. 1, 4",
+              onchange: (e: Event) => setze("tragend", (e.target as HTMLInputElement).value.split(/[ ,;]+/).map(Number).filter((n) => n >= 1), `${x.name}: tragende Lamellen`) })];
+        })() : []),
         ...(String(x.typ).startsWith("tv_board") ? [h("label", {}, "TV Zoll (0 = keiner)"), num(tvZoll(x), (v) => setze("tv_zoll", Math.max(0, Math.round(v)), `${x.name}: TV ${Math.round(v)}"`), 1)] : []),
         ...(x.licht ? [
           h("label", {}, "Licht K / lm"), h("div", { class: "zwei" },

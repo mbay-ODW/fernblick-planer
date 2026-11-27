@@ -115,7 +115,8 @@ VORLAGE_FELDER = ("typ", "name", "masse_bth", "farbe", "farbe_hex", "material", 
                   "nische_breite", "nische", "platte_farbe",
                   "beine", "rahmen_hoehe", "schubladen", "knoepfe", "kasten_hoehe", "faecher_x", "faecher_y", "rueckwand",
                   "container", "container_breite", "container_farbe", "kante_farbe", "beine_farbe", "beine_material", "fussteil",
-                  "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y")
+                  "rueckenkissen", "zierkissen", "arm_breite", "sitztiefe", "arme", "schubladen_x", "schubladen_y",
+                  "anzahl", "lamelle_breite", "abstand", "tragend", "boden_abstand")
 
 @mcp.tool(annotations=LESEN)
 def planer_ueberblick() -> dict[str, Any]:
@@ -181,6 +182,8 @@ def moebel_setzen(moebel: list[dict[str, Any]], notiz: str = "") -> dict[str, An
     mehrzweckschrank (teilung = Höhe der Griffmulde in m),
     waschmaschinen_unterbau (nische_breite, nische links/rechts, platte_farbe),
     bett (beine, rahmen_hoehe, schubladen je Seite, knoepfe, fussteil = Höhe Fußteil in m), tagesbett (schubladen, kasten_hoehe),
+    lamellen (frei stehende Lamellengruppe bis unter die Decke: anzahl, lamelle_breite entlang B, abstand = lichte
+    Weite, tragend = [Nr. ab 1] im 2D-Plan hervorgehoben, boden_abstand; B = anzahl·breite + (anzahl−1)·abstand),
     faecherregal (faecher_x, faecher_y, rueckwand; z. B. KALLAX),
     kommode (schubladen_x, schubladen_y; z. B. MALM),
     schreibtisch_container (container links/rechts, container_breite, schubladen, kante_farbe; z. B. LAGKAPTEN/ALEX),

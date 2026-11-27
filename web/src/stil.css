@@ -151,6 +151,9 @@ svg.plan { width: 100%; height: 100%; display: block; background: #fbfaf7; touch
 .plan .stueck.haengend rect { stroke-dasharray: .03 .02; }
 .plan .stueck .ruecken { stroke: #1d1f1b; stroke-width: .05; }
 .plan .stueck .kontur { fill: none; stroke: #2e302b; stroke-width: .01; }
+.plan .stueck rect.lamellen-rahmen { stroke-dasharray: .04 .03; stroke-width: .008; }
+.plan .stueck rect.lamelle { fill-opacity: 1; stroke-width: .008; }
+.plan .stueck rect.lamelle.tragend { stroke: #b3261e; stroke-width: .02; }
 .plan .stueck.gewaehlt rect, .plan .stueck.gewaehlt ellipse { stroke: var(--gelb); stroke-width: .035; }
 .plan .stueck.warnung rect { stroke: var(--warn); stroke-width: .03; }
 .plan .moebelname { font-size: .13px; fill: #1d1f1b; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: rgba(255,255,255,.75); stroke-width: .03px; }
